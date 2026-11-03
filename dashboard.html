@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ops Signal | Synthetic Log Lab</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1020;--panel:#111a2d;--line:#24314a;--muted:#91a0b8;--text:#e7edf7;--cyan:#62d5d0;--red:#ff6b78;--amber:#f6c76b;--green:#73d99a}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#152344 0,transparent 42%),var(--bg);color:var(--text);font:14px/1.45 Inter,Segoe UI,Arial,sans-serif}
+    header{padding:22px 28px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:20px}
+    h1{font-size:20px;margin:0;letter-spacing:.02em}h1 span{color:var(--cyan)}.sub,.muted{color:var(--muted)}
+    main{max-width:1600px;margin:auto;padding:22px 28px}.layout{display:grid;grid-template-columns:320px 1fr;gap:18px}
+    .panel,.metric{background:linear-gradient(145deg,rgba(17,26,45,.98),rgba(14,22,39,.96));border:1px solid var(--line);border-radius:12px}
+    .panel{padding:18px}.panel h2{font-size:14px;margin:0 0 15px}.control{margin:14px 0}.control label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}
+    select,input,button{font:inherit;color:var(--text);background:#0b1324;border:1px solid #2b3a56;border-radius:7px;padding:9px 10px}
+    select,input{width:100%}button{cursor:pointer;transition:.15s}button:hover{border-color:var(--cyan);color:var(--cyan)}button.primary{background:#123b45;border-color:#1d737b}button.danger{border-color:#763b49;color:#ff9ca5}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.statusline{display:flex;align-items:center;gap:8px;margin:12px 0;color:var(--muted)}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 9px currentColor}.dot.off{background:#738096}
+    .metrics{display:grid;grid-template-columns:repeat(5,minmax(100px,1fr));gap:10px;margin-bottom:15px}.metric{padding:12px 14px}.metric small{display:block;color:var(--muted);font-size:11px}.metric strong{display:block;font-size:19px;margin-top:4px}
+    .service-strip{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 15px}.service{border:1px solid var(--line);border-radius:99px;color:#b8c5d8;padding:4px 8px;font-size:11px}
+    .toolbar{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1.5fr;gap:8px;margin-bottom:12px}.log-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .log-table{border:1px solid var(--line);border-radius:9px;overflow:hidden}.row{display:grid;grid-template-columns:170px 185px 80px minmax(180px,1fr) 135px;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(36,49,74,.7);font-size:12px}
+    .row:last-child{border-bottom:0}.row.header{background:#151f34;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}.entry{cursor:pointer}.entry:hover{background:#151f34}.timestamp,.mono{font-family:Consolas,ui-monospace,monospace}.timestamp{color:#a7b5ca;font-size:11px}.service-name{color:var(--cyan)}.level{font-weight:700}.level.error{color:var(--red)}.level.warning{color:var(--amber)}.level.info{color:var(--green)}.message{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ids{color:var(--muted);font:10px Consolas,monospace;overflow:hidden;text-overflow:ellipsis}
+    details{grid-column:1/-1;color:#c7d2e3}details pre{white-space:pre-wrap;overflow:auto;max-height:360px;background:#080e1b;padding:12px;border-radius:6px;color:#b8d5d8;font:11px/1.5 Consolas,monospace}
+    .empty{padding:40px;text-align:center;color:var(--muted)}.error-message{color:var(--red);min-height:18px;font-size:12px}.count{color:var(--muted);font-size:12px}
+    .kb-panel{margin-top:18px}.kb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.kb-card{border:1px solid var(--line);border-radius:8px;padding:14px}.kb-card h3{margin:0 0 10px;font-size:13px}.kb-actions{display:flex;gap:8px;margin-top:8px}.kb-actions input{flex:1}.kb-results{white-space:pre-wrap;overflow:auto;max-height:300px;background:#080e1b;padding:12px;border-radius:6px;color:#b8d5d8;font:11px/1.5 Consolas,monospace;margin-top:10px}.kb-status{font-size:12px;color:var(--muted);margin:8px 0}.kb-status strong{color:var(--cyan)}
+    .monitor-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.monitor-card{border:1px solid var(--line);border-radius:8px;padding:14px;min-width:0}.monitor-card h3{font-size:13px;margin:0 0 10px}.monitor-card pre{white-space:pre-wrap;overflow:auto;max-height:260px;background:#080e1b;padding:10px;border-radius:6px;color:#b8d5d8;font:11px/1.5 Consolas,monospace;margin:0}.feedback-form{display:grid;grid-template-columns:1fr 90px auto;gap:8px;margin:10px 0}
+    @media(max-width:1000px){.layout{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(3,1fr)}.toolbar{grid-template-columns:repeat(2,1fr)}.row{grid-template-columns:135px 155px 65px minmax(120px,1fr)}.row>*:last-child{display:none}}
+    @media(max-width:900px){.monitor-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:700px){.kb-grid,.monitor-grid{grid-template-columns:1fr}.feedback-form{grid-template-columns:1fr 90px}}
+    @media(max-width:600px){header,main{padding:16px}.metrics{grid-template-columns:repeat(2,1fr)}.toolbar{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr 65px minmax(100px,1fr)}.row .timestamp,.row .ids{display:none}.kb-actions{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1><span>OPS SIGNAL</span> / Synthetic Log Lab</h1><div class="sub">Interconnected service logs for simulator testing — synthetic data only</div></div>
+    <div class="statusline"><i id="runningDot" class="dot"></i><span id="runningLabel">Connecting…</span></div>
+  </header>
+  <main>
+    <div class="layout">
+      <aside class="panel">
+        <h2>Simulation controls</h2>
+        <div class="actions">
+          <button id="startButton" class="primary">Start generation</button>
+          <button id="stopButton">Stop generation</button>
+        </div>
+        <div class="control"><label for="scenario">Incident scenario</label>
+          <select id="scenario">
+            <option value="normal">Normal operations</option>
+            <option value="code_bug">A · Application code bug</option>
+            <option value="db_exhaustion">B · PostgreSQL exhaustion</option>
+            <option value="kafka_lag">C · Kafka consumer lag</option>
+            <option value="faulty_deployment">D · Faulty deployment</option>
+            <option value="high_latency">E · High API latency</option>
+            <option value="infrastructure">F · Infrastructure pressure</option>
+          </select>
+        </div>
+        <div class="actions">
+          <button id="triggerButton" class="primary">Trigger scenario</button>
+          <button id="recoverButton">Trigger recovery</button>
+          <button id="resetButton" class="danger">Reset simulator</button>
+        </div>
+        <div class="control"><label for="frequency">Request flows per second: <span id="frequencyLabel">1</span></label>
+          <input id="frequency" type="range" min="0.2" max="20" step="0.2" value="1">
+        </div>
+        <div id="scenarioDescription" class="muted"></div>
+        <div class="muted">Scenario labels are control-panel state only; generated operational logs do not include the selected cause.</div>
+        <div id="errorMessage" class="error-message"></div>
+        <div class="control"><label>Simulated service dependencies</label>
+          <div class="muted">Gateway → Auth → Telemetry → PostgreSQL / Redis → Kafka → Notifications<br>Telemetry and platform components run in simulated Kubernetes; releases come from the simulated pipeline.</div>
+        </div>
+      </aside>
+      <section>
+        <div class="metrics">
+          <div class="metric"><small>REQUESTS</small><strong id="requests">0</strong></div>
+          <div class="metric"><small>ERROR RATE</small><strong id="errorRate">0%</strong></div>
+          <div class="metric"><small>DB CONNECTIONS</small><strong id="dbConnections">4 / 20</strong></div>
+          <div class="metric"><small>KAFKA LAG</small><strong id="kafkaLag">0</strong></div>
+          <div class="metric"><small>MEMORY / DISK</small><strong id="resources">256 MB / 42%</strong></div>
+        </div>
+        <div id="services" class="service-strip"></div>
+        <div class="panel">
+          <div class="log-head"><h2>Live log explorer</h2><span id="logCount" class="count">Waiting for events…</span></div>
+          <div class="toolbar">
+            <input id="search" placeholder="Search message or JSON">
+            <select id="serviceFilter"><option value="">All services</option></select>
+            <select id="severityFilter"><option value="">All severities</option><option>info</option><option>warning</option><option>error</option><option>critical</option></select>
+            <select id="scenarioFilter"><option value="">All scenarios</option><option>normal</option><option>code_bug</option><option>db_exhaustion</option><option>kafka_lag</option><option>faulty_deployment</option><option>high_latency</option><option>infrastructure</option><option>recovery</option></select>
+            <select id="timeFilter"><option value="0">All time</option><option value="5">Last 5 minutes</option><option value="15">Last 15 minutes</option><option value="60">Last hour</option></select>
+          </div>
+          <div id="logTable" class="log-table"><div class="empty">Starting the live event stream…</div></div>
+        </div>
+      </section>
+    </div>
+    <section class="panel kb-panel">
+      <h2>AG-02 · Knowledge Base Agent</h2>
+      <div id="kbStatus" class="kb-status">Checking document and log stores…</div>
+      <div class="kb-grid">
+        <div class="kb-card">
+          <h3>MA-03 / MA-04 · SOP documents</h3>
+          <div class="muted">Copy approved SOPs into <span class="mono">data/sops</span>, then ingest. Supported: TXT, Markdown, RST, JSON, YAML, CSV, PDF and DOCX.</div>
+          <div class="kb-actions"><button id="ingestButton" class="primary">Ingest SOP folder</button></div>
+          <div class="kb-actions"><input id="docQuery" placeholder="Search indexed documents"><button id="docSearchButton">Search SOPs</button></div>
+          <pre id="docResults" class="kb-results">Document search results and source citations appear here.</pre>
+        </div>
+        <div class="kb-card">
+          <h3>MA-05 · Operational log retrieval</h3>
+          <div class="muted">Search OpenSearch when configured; otherwise search the current bounded local log buffer. New events are indexed in the background when a server is configured.</div>
+          <div class="kb-actions"><input id="logQuery" placeholder="Search operational logs"><button id="logSearchButton">Search logs</button></div>
+          <div class="kb-actions"><button id="backfillButton">Queue existing JSONL history to OpenSearch</button></div>
+          <pre id="logResults" class="kb-results">Log search results appear here.</pre>
+        </div>
+      </div>
+      <div class="kb-status">MA-06 graph relationships are deferred. MA-07 flags provenance/conflicts and only stores incident learning after human approval. Retrieval is not an RCA conclusion.</div>
+      <div id="kbError" class="error-message"></div>
+    </section>
+    <section class="panel kb-panel">
+      <h2>AG-08 · Monitoring Agent / MA-09–MA-15</h2>
+      <div id="monitorStatus" class="kb-status">Loading monitoring pipeline…</div>
+      <div class="monitor-grid">
+        <div class="monitor-card">
+          <h3>MA-11 · Service health and SLI/SLO</h3>
+          <pre id="monitorHealth">Waiting for normalized events.</pre>
+        </div>
+        <div class="monitor-card">
+          <h3>MA-14 · Detected events and alert candidates</h3>
+          <pre id="monitorAlerts">No alert candidates yet.</pre>
+        </div>
+        <div class="monitor-card">
+          <h3>MA-09 · Connectors / MA-10 · Data quality</h3>
+          <pre id="monitorConnectors">Waiting for connector status.</pre>
+        </div>
+        <div class="monitor-card">
+          <h3>MA-15 · Royal Enfield review demo</h3>
+          <div id="reviewSummary" class="muted">Synthetic dataset summary will appear here.</div>
+          <div class="feedback-form">
+            <input id="reviewText" maxlength="5000" placeholder="Enter sample review text">
+            <select id="reviewRating"><option value="">No rating</option><option value="1">1 star</option><option value="2">2 stars</option><option value="3">3 stars</option><option value="4">4 stars</option><option value="5">5 stars</option></select>
+            <button id="analyzeReviewButton">Analyze</button>
+          </div>
+          <pre id="reviewResult">No review analyzed.</pre>
+          <div class="muted">Demo reviews are generated test data, not genuine customer feedback. Sentiment is a rule-based baseline; no model is loaded.</div>
+        </div>
+      </div>
+      <div class="kb-status">MA-06 knowledge graph stays deferred. Monitoring outputs are events and evidence, not confirmed root-cause findings.</div>
+      <div id="monitorError" class="error-message"></div>
+    </section>
+  </main>
+<script>
+const $ = id => document.getElementById(id);
+let cursor = 0, records = [], refreshBusy = false;
+const serviceNames = new Set();
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+async function api(path, options = {}) {
+  const response = await fetch(path, {headers:{"Content-Type":"application/json"}, ...options});
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+  return body;
+}
+function setError(message="") { $("errorMessage").textContent = message; }
+function setKbError(message="") { $("kbError").textContent = message; }
+function setMonitorError(message="") { $("monitorError").textContent = message; }
+function showKbResult(elementId, value) {
+  $(elementId).textContent = JSON.stringify(value, null, 2);
+}
+async function updateKbStatus() {
+  const status = await api("/api/kb/status");
+  const agents = status.microagents;
+  const chroma = agents["MA-04_document_knowledge_retrieval"];
+  const os = agents["MA-05_log_knowledge_retrieval"];
+  $("kbStatus").textContent =
+    `Chroma: ${chroma.available ? `${chroma.chunks} indexed chunks` : "unavailable — install requirements.txt"} · ` +
+    `OpenSearch: ${os.configured ? `${os.indexed} indexed, ${os.queue_depth} queued` : "not configured (local log buffer active)"}`;
+}
+async function updateMonitoring() {
+  const [status, health, alerts] = await Promise.all([
+    api("/api/monitoring/status"),
+    api("/api/monitoring/health"),
+    api("/api/monitoring/alerts?limit=20")
+  ]);
+  const microagents = status.microagents;
+  const collector = microagents["MA-09_source_collector_connector_manager"];
+  $("monitorStatus").textContent =
+    `${status.agent} · ${status.events_processed.toLocaleString()} processed · ` +
+    `${status.malformed_events.toLocaleString()} malformed · queue ${collector.queue_depth}/${collector.queue_capacity}`;
+  $("monitorHealth").textContent = JSON.stringify(health.services, null, 2);
+  $("monitorAlerts").textContent = JSON.stringify(alerts.items, null, 2);
+  $("monitorConnectors").textContent = JSON.stringify({
+    connectors: collector.connectors,
+    normalization: microagents["MA-10_data_normalization_quality"]
+  }, null, 2);
+  const feedback = microagents["MA-15_feedback_sentiment_topic_analyzer"];
+  $("reviewSummary").textContent = feedback.available
+    ? `${feedback.review_count} clearly synthetic Royal Enfield reviews · sentiment: ${JSON.stringify(feedback.sentiment_counts)} · top topics: ${JSON.stringify(Object.entries(feedback.topic_counts || {}).slice(0, 5))}`
+    : "Synthetic review file has not been generated yet.";
+}
+async function updateStatus() {
+  const s = await api("/api/simulator/status");
+  $("runningLabel").textContent = s.running ? "Generating events" : "Generation paused";
+  $("runningDot").classList.toggle("off", !s.running);
+  $("requests").textContent = s.requests.toLocaleString();
+  $("errorRate").textContent = `${(s.error_rate * 100).toFixed(1)}%`;
+  $("dbConnections").textContent = `${s.db_connections_active} / ${s.db_connections_max}`;
+  $("kafkaLag").textContent = s.kafka_consumer_lag.toLocaleString();
+  $("resources").textContent = `${s.memory_mb} MB / ${s.disk_percent}%`;
+  $("frequencyLabel").textContent = s.frequency;
+  $("scenarioDescription").textContent = `${s.scenario}: ${s.scenario_description}`;
+  $("services").innerHTML = s.services.map(name => `<span class="service">${escapeHtml(name)}</span>`).join("");
+  s.services.forEach(name => {
+    if (!serviceNames.has(name)) {
+      serviceNames.add(name);
+      $("serviceFilter").insertAdjacentHTML("beforeend", `<option>${escapeHtml(name)}</option>`);
+    }
+  });
+  if ($("frequency").dataset.changed !== "true") $("frequency").value = s.frequency;
+}
+function filteredRecords() {
+  const severity = $("severityFilter").value;
+  const service = $("serviceFilter").value;
+  const query = $("search").value.trim().toLowerCase();
+  const minutes = Number($("timeFilter").value);
+  const since = minutes ? Date.now() - minutes * 60_000 : 0;
+  return records.filter(record =>
+    (!severity || record["log.level"] === severity) &&
+    (!service || record["service.name"] === service) &&
+    (!since || Date.parse(record["@timestamp"]) >= since) &&
+    (!query || JSON.stringify(record).toLowerCase().includes(query))
+  );
+}
+function renderLogs() {
+  const visible = filteredRecords().slice(-300).reverse();
+  $("logCount").textContent = `${visible.length} displayed · ${records.length} buffered`;
+  if (!visible.length) {
+    $("logTable").innerHTML = '<div class="empty">No records match these filters. Events continue streaming.</div>';
+    return;
+  }
+  $("logTable").innerHTML = `<div class="row header"><span>Timestamp</span><span>Service</span><span>Severity</span><span>Message</span><span>Request / trace</span></div>` +
+    visible.map(record => {
+      const severity = String(record["log.level"] || "info").toLowerCase();
+      const timestamp = record["@timestamp"] || record.timestamp || "";
+      const ids = record.request_id && record["trace.id"] !== "-" ? `${record.request_id} / ${record["trace.id"]}` : (record.request_id || record["trace.id"] || "—");
+      return `<details class="row entry">
+        <summary style="display:contents">
+          <span class="timestamp">${escapeHtml(timestamp)}</span>
+          <span class="service-name">${escapeHtml(record["service.name"] || record.service)}</span>
+          <span class="level ${escapeHtml(severity)}">${escapeHtml(severity.toUpperCase())}</span>
+          <span class="message" title="${escapeHtml(record.message)}">${escapeHtml(record.message)}</span>
+          <span class="ids" title="${escapeHtml(ids)}">${escapeHtml(ids)}</span>
+        </summary>
+        <pre>${escapeHtml(JSON.stringify(record, null, 2))}</pre>
+      </details>`;
+    }).join("");
+}
+async function refreshLogs() {
+  if (refreshBusy) return;
+  refreshBusy = true;
+  try {
+    const params = new URLSearchParams({after:String(cursor), limit:"500"});
+    if ($("scenarioFilter").value) params.set("scenario", $("scenarioFilter").value);
+    const result = await api(`/api/logs?${params}`);
+    cursor = result.latest_sequence;
+    if (result.items.length) {
+      records.push(...result.items);
+      if (records.length > 2000) records = records.slice(-2000);
+    }
+    renderLogs();
+  } catch (error) { setError(error.message); }
+  finally { refreshBusy = false; }
+}
+async function runAction(action) {
+  setError("");
+  try { await action(); await updateStatus(); await refreshLogs(); }
+  catch (error) { setError(error.message); }
+}
+$("startButton").onclick = () => runAction(() => api("/api/simulator/start", {method:"POST"}));
+$("stopButton").onclick = () => runAction(() => api("/api/simulator/stop", {method:"POST"}));
+$("recoverButton").onclick = () => runAction(() => api("/api/simulator/recover", {method:"POST"}));
+$("resetButton").onclick = () => runAction(() => api("/api/simulator/reset", {method:"POST"}));
+$("triggerButton").onclick = () => runAction(async () => {
+  const scenario = $("scenario").value;
+  await api(`/api/simulator/scenario/${scenario}`, {method:"POST"});
+  if (scenario === "code_bug") {
+    try { await fetch("/bug/zero"); } catch (_) {}
+  }
+});
+$("frequency").oninput = () => { $("frequency").dataset.changed = "true"; $("frequencyLabel").textContent = $("frequency").value; };
+$("frequency").onchange = () => runAction(() => api("/api/simulator/frequency", {method:"POST", body:JSON.stringify({frequency:Number($("frequency").value)})}));
+["search","serviceFilter","severityFilter","timeFilter"].forEach(id => {
+  $(id).addEventListener(id === "search" ? "input" : "change", renderLogs);
+});
+$("scenarioFilter").addEventListener("change", () => {
+  cursor = 0;
+  records = [];
+  refreshLogs();
+});
+$("ingestButton").onclick = () => runKbAction(async () => {
+  const result = await api("/api/kb/documents/ingest", {method:"POST"});
+  showKbResult("docResults", result);
+  await updateKbStatus();
+});
+$("docSearchButton").onclick = () => runKbAction(async () => {
+  const query = $("docQuery").value.trim();
+  if (!query) throw new Error("Enter a document search query.");
+  const params = new URLSearchParams({query});
+  const result = await api(`/api/kb/documents/search?${params}`);
+  showKbResult("docResults", result);
+});
+$("logSearchButton").onclick = () => runKbAction(async () => {
+  const params = new URLSearchParams({query:$("logQuery").value.trim()});
+  const result = await api(`/api/kb/logs/search?${params}`);
+  showKbResult("logResults", result);
+});
+$("backfillButton").onclick = () => runKbAction(async () => {
+  const result = await api("/api/kb/logs/backfill", {method:"POST"});
+  showKbResult("logResults", result);
+  await updateKbStatus();
+});
+ $("analyzeReviewButton").onclick = async () => {
+  setMonitorError("");
+  try {
+    const text = $("reviewText").value.trim();
+    if (!text) throw new Error("Enter sample review text.");
+    const rating = $("reviewRating").value;
+    const result = await api("/api/monitoring/feedback/analyze", {
+      method:"POST",
+      body:JSON.stringify({text, ...(rating ? {rating:Number(rating)} : {})})
+    });
+    $("reviewResult").textContent = JSON.stringify(result, null, 2);
+  } catch (error) { setMonitorError(error.message); }
+};
+async function runKbAction(action) {
+  setKbError("");
+  try { await action(); }
+  catch (error) { setKbError(error.message); }
+}
+async function init() {
+  try { await updateStatus(); await refreshLogs(); await updateKbStatus(); await updateMonitoring(); }
+  catch (error) { setError(error.message); }
+  setInterval(() => {
+    updateStatus().catch(error => setError(error.message));
+    refreshLogs();
+    updateKbStatus().catch(error => setKbError(error.message));
+    updateMonitoring().catch(error => setMonitorError(error.message));
+  }, 3000);
+}
+init();
+</script>
+</body>
+</html>
