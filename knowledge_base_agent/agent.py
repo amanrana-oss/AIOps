@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -31,12 +32,25 @@ class KnowledgeBaseAgent:
     async def ingest_documents(self) -> dict[str, Any]:
         async with self._ingest_lock:
             prepared = await asyncio.to_thread(self.ingestor.prepare)
+            manual_ingestor = DocumentIngestionMicroAgent(self.data_root / "real-data")
+            manuals = await asyncio.to_thread(manual_ingestor.prepare, {".pdf", ".docx"}, 200 * 1024 * 1024)
+            for document in manuals["documents"]:
+                document["metadata"]["source_path"] = "real-data/" + document["metadata"]["source_path"]
+                document["metadata"]["knowledge_kind"] = "uploaded_reference_document"
+                document["id"] = hashlib.sha256(("real-data/" + document["id"]).encode()).hexdigest()
+            prepared["documents"].extend(manuals["documents"])
+            prepared["files_read"] += manuals["files_read"]
+            prepared["skipped"].extend(manuals["skipped"])
+            trackers = await asyncio.to_thread(self.ingestor.prepare_issue_trackers, self.data_root / "real-data")
+            prepared["documents"].extend(trackers["documents"])
+            prepared["files_read"] += trackers["files_read"]
+            prepared["skipped"].extend(trackers["skipped"])
             indexed = await asyncio.to_thread(self.store.upsert, prepared["documents"])
             result = {
                 "files_read": prepared["files_read"],
                 "chunks_indexed": indexed,
                 "skipped": prepared["skipped"],
-                "store": "chroma",
+                "store": self.store.status()["backend"],
             }
             self.last_ingest = {**result, "completed_at": utc_now()}
             return result
@@ -66,5 +80,5 @@ class KnowledgeBaseAgent:
                 },
             },
             "llm_required": False,
-            "embedding_method": "deterministic local lexical vectors (no model download)",
+            "embedding_method": "Hybrid retrieval: local Chroma all-MiniLM-L6-v2 semantic vectors fused with BM25 lexical ranking; lexical-only fallback if Chroma is unavailable",
         }

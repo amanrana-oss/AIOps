@@ -1,0 +1,21 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run AIOps application",
+			"type": "shell",
+			"command": "python",
+			"args": [
+				"-m",
+				"uvicorn",
+				"app:app",
+				"--host",
+				"127.0.0.1",
+				"--port",
+				"8001"
+			],
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}

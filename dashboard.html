@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ops Signal | Synthetic Log Lab</title>
+  <title>Ops Signal | Incident Operations</title>
   <style>
     :root{color-scheme:dark;--bg:#0b1020;--panel:#111a2d;--line:#24314a;--muted:#91a0b8;--text:#e7edf7;--cyan:#62d5d0;--red:#ff6b78;--amber:#f6c76b;--green:#73d99a}
     *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#152344 0,transparent 42%),var(--bg);color:var(--text);font:14px/1.45 Inter,Segoe UI,Arial,sans-serif}
@@ -29,22 +29,335 @@
     @media(max-width:900px){.monitor-grid{grid-template-columns:1fr 1fr}}
     @media(max-width:700px){.kb-grid,.monitor-grid{grid-template-columns:1fr}.feedback-form{grid-template-columns:1fr 90px}}
     @media(max-width:600px){header,main{padding:16px}.metrics{grid-template-columns:repeat(2,1fr)}.toolbar{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr 65px minmax(100px,1fr)}.row .timestamp,.row .ids{display:none}.kb-actions{flex-direction:column}}
+    :root{color-scheme:light;--bg:#edf2ed;--panel:#fff;--line:#d5dfd9;--muted:#60716c;--text:#172c32;--cyan:#087e78;--red:#c3433d;--amber:#a86406;--green:#25815e}
+    body{background-color:var(--bg);background-image:linear-gradient(rgba(18,73,71,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(18,73,71,.035) 1px,transparent 1px);background-size:28px 28px;color:var(--text);font-family:Bahnschrift,"Segoe UI",sans-serif}
+    header{padding:18px max(24px,calc((100vw - 1500px)/2));background:#14343a;color:#f4f6ef;border-bottom:3px solid #e4774f}
+    h1{font-family:Cambria,Georgia,serif;font-size:26px;letter-spacing:0}h1 span{color:#8ce0cb}.sub,.muted{color:#667672}
+    header .sub{color:#bfd0cb}.statusline{margin:0;color:#d4e5df}.dot{background:#83dfac}
+    main{max-width:1580px;padding:20px 24px}.layout{grid-template-columns:300px minmax(0,1fr);gap:14px}
+    .panel,.metric{background:#fff;border:1px solid var(--line);border-radius:5px;box-shadow:0 2px 8px rgba(23,44,50,.045)}
+    .panel{padding:16px}.panel h2{color:#173b3d}.metric{padding:11px 14px}.metric small{color:#667672}.metric strong{color:#173b3d}
+    select,input,button{color:#1b3337;background:#f8faf8;border:1px solid #c8d5cf;border-radius:4px;padding:9px 10px}
+    select:focus,input:focus,button:focus-visible{outline:2px solid #2da99b;outline-offset:1px}
+    button:hover{border-color:#087e78;color:#087e78;background:#f2fbf8}button.primary{background:#126b66;color:white;border-color:#126b66}button.primary:hover{background:#0b5753;color:white}button.danger{border-color:#d6aaa2;color:#b43e36}
+    .service{border-radius:3px;background:#fff;color:#48615d;border-color:#cad8d2}.toolbar{grid-template-columns:1.2fr 1fr 1fr 1fr 1.3fr}
+    .log-table{border-radius:4px;border-color:var(--line)}.row{border-color:#e4ebe6}.row.header{background:#e8f0eb;color:#51645f}.entry:hover{background:#f3f8f5}.service-name{color:#087e78}
+    details pre,.kb-results,.monitor-card pre{background:#f2f6f3;color:#234342;border:1px solid #e0e9e3;border-radius:4px}
+    .kb-panel{margin-top:14px}.kb-card,.monitor-card{border:1px solid #dce5df;border-radius:4px;background:#fbfdfb}.kb-card h3,.monitor-card h3{color:#21474a}
+    .kb-status strong{color:#087e78}.error-message{color:#b43e36}
+    .command-center{margin-top:0;border-top:4px solid #087e78}.command-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.eyebrow{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#b75a37}.command-title{font:22px Cambria,Georgia,serif;margin:3px 0 2px;color:#173b3d}.command-meta{font-size:12px;color:#687a75}.workflow-card{min-width:0;padding:13px;border:1px solid #dce5df;background:#f9fbf9;border-radius:4px}.workflow-card strong{display:block;font:17px Cambria,Georgia,serif;color:#193b3c}.workflow-card p{margin:6px 0;color:#586b66;font-size:12px}.workflow-card .micro{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#87938e}
+    .workflow-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.workflow-actions button{font-size:12px}.approval-note{font-size:10px;color:#9a5c1f}.report-box{margin-top:12px}.report-box summary{cursor:pointer;color:#285b59;font-weight:700}.report-box pre{max-height:300px}.agent-state{font-size:11px;color:#637772}
+    .secondary-panel{margin-top:14px;padding:13px 16px;background:#fff;border:1px solid var(--line);border-radius:4px}.secondary-panel>summary{cursor:pointer;color:#365b52;font-size:13px;font-weight:700}.secondary-panel[open]>summary{margin-bottom:14px}
+    @media(max-width:1050px){.layout{grid-template-columns:270px minmax(0,1fr)}}
+    @media(max-width:700px){header{padding:16px;align-items:flex-start}.command-head{display:block}.command-head .queue-controls{margin-top:10px}.layout{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.monitor-grid{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr 1fr}}
+    .plain-header{font-family:Bahnschrift,"Segoe UI",sans-serif;font-size:23px}
+    .live-banner{display:flex;align-items:center;gap:12px;padding:13px 16px;margin-bottom:12px;background:#e4f5ea;border:1px solid #b7dec4;border-left:4px solid #25815e;border-radius:4px;color:#23483a}
+    .live-banner strong{display:block;font-size:14px}.live-banner span{font-size:12px;color:#526b60}
+    .live-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}
+    .live-metric{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1px solid var(--line);border-radius:4px}
+    .live-metric strong{display:block;font-size:20px;color:#173b3d}.live-metric span{font-size:11px;color:#637772}
+    .live-metric .metric-mark{width:9px;height:9px;border-radius:50%;background:#16866e;flex:none}
+    .command-center{margin-top:0}.command-title{font-size:24px}.command-meta{margin-top:3px}
+    .plain-workflow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+    .plain-step{padding:15px;background:#fff;border:1px solid #d8e2dc;border-radius:4px;min-width:0}
+    .plain-step h3{margin:0 0 9px;color:#365b52;font-size:12px;font-weight:700;text-transform:uppercase}
+    .plain-step strong{display:block;font:19px Cambria,Georgia,serif;color:#193b3c}
+    .plain-step p{margin:8px 0 0;font-size:12px;color:#586b66;line-height:1.55}
+    .plain-step.recommendation{border-top:3px solid #d58735}.plain-step.ticket{border-top:3px solid #3c88a0}
+    .plain-step .approval-note{font-size:11px;line-height:1.4}
+    .queue-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.queue-controls select{width:auto;min-width:240px;max-width:100%}
+    .pipeline-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;color:#56706a;font-size:11px}
+    .pipeline-line span{padding:5px 8px;background:#edf4ef;border:1px solid #d7e4da;border-radius:3px}.pipeline-line b{color:#849890;font-weight:400}
+    .technical-details{margin-top:14px;border-top:1px solid #e0e8e2;padding-top:10px}.technical-details summary{cursor:pointer;color:#55716a;font-size:12px;font-weight:600}
+    .demo-run{display:none;margin:10px 0;padding:9px 11px;border:1px solid #43594b;background:#202d25;border-radius:4px;color:#cfe4d4;font-size:11px}
+    .demo-run.visible{display:block}.demo-run strong{color:#f0d18a}.demo-run.error{border-color:#9b5048;background:#3a2522;color:#ffd2cc}
+    .ticket-create-note{margin-top:8px;color:#aab8ad;font-size:10px;line-height:1.4}
+    .incident-header{padding:18px 20px;background:#1a241f;border:1px solid #3b4b41;border-top:3px solid #83d6bd;border-radius:6px}
+    .incident-header .command-title{font-size:27px}.incident-header .queue-controls select{max-width:380px}
+    .incident-section-label{margin:18px 2px 7px;color:#9eb0a4;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+    .pipeline-line{gap:7px}.pipeline-line span{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:5px;font-size:10px}
+    .pipeline-line .pipeline-step::before{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#355143;color:#d7efe0;font-size:9px;font-weight:700;content:attr(data-step)}
+    .response-grid{align-items:stretch;gap:14px;margin-top:8px}.response-grid .plain-step{min-height:0;padding:19px;border-radius:6px}.plain-step h3{margin-bottom:12px;font-size:10px;letter-spacing:.04em}.plain-step strong{font-size:22px;line-height:1.25}.plain-step p{font-size:13px;line-height:1.6}.plain-step .approval-note{font-size:11px}
+    .plain-step.recommendation{background:#24291f;border-top:3px solid #e9a94f}.plain-step.ticket{background:#1d2927;border-top:3px solid #65b8c2}
+    .plain-step .workflow-actions{align-items:center;gap:8px;margin-top:13px}.plain-step .workflow-actions button,.plain-step .workflow-actions select{width:auto;min-width:145px}
+    .investigation-details{margin-top:12px;padding-top:10px;border-top:1px solid #394840}.investigation-details>span{color:#a7bcb0;font-size:10px;font-weight:700;text-transform:uppercase}.investigation-details ul,.investigation-details ol{display:grid;gap:5px;margin:7px 0 0;padding-left:17px;color:#c6d3c9;font-size:11px;line-height:1.45}.investigation-details li{overflow-wrap:anywhere}
+    .incident-timeline li{padding-left:2px}.incident-timeline time{color:#91aa9a;font-size:10px;font-variant-numeric:tabular-nums}#page-incidents .incident-timeline strong{display:inline;margin-left:5px;font:700 11px/1.35 "Aptos",Bahnschrift,"Segoe UI",sans-serif;color:#dce8df}#page-incidents .incident-timeline p{margin:3px 0 0;font-size:11px;color:#c6d3c9}#page-incidents .incident-timeline code{display:block;margin-top:2px;color:#92b5a2;font-size:9px;overflow-wrap:anywhere}.timeline-more{margin-top:8px;color:#a8c6b4;font-size:10px}.timeline-more summary{cursor:pointer}.timeline-more[open] ol{margin-top:8px}
+    .response-context{display:grid;gap:7px;margin-top:12px;padding-top:10px;border-top:1px solid #49503e}.response-context>div{display:grid;gap:3px}.response-context span{color:#c3b47e;font-size:9px;font-weight:700;text-transform:uppercase}.response-context strong{font:600 11px/1.4 "Aptos",Bahnschrift,"Segoe UI",sans-serif;color:#e5e9d8}.response-context p{margin:0;color:#c6d0bf;font-size:11px;line-height:1.45}
+    .report-box{padding:17px;border-color:#3a4b41;border-radius:6px}.report-box .command-head{align-items:center}.report-box strong{font:18px/1.35 Cambria,Georgia,serif;color:#edf3ee}.report-box button{min-width:140px}
+    .report-box pre,.technical-details pre,#incidentDetails,#correlationDetails{background:#121a16!important;color:#d2e0d5!important;border:1px solid #35443c!important;border-radius:5px!important;max-height:270px;overflow:auto;overflow-wrap:anywhere;white-space:pre-wrap}
+    .technical-details{padding:12px 2px}.technical-details h3{color:#d7e4da;font-size:13px}
+    @media(max-width:1100px){.command-head{align-items:flex-start}.response-grid{grid-template-columns:1fr;margin-top:10px}.plain-step{min-height:0}.incident-header{padding:15px}.incident-header .command-title{font-size:23px}}
+    @media(max-width:650px){.incident-header{padding:12px}.incident-header .command-title{font-size:20px}.incident-header .queue-controls{display:grid;grid-template-columns:minmax(0,1fr) auto}.incident-header .queue-controls select{width:100%;min-width:0}.pipeline-line span{font-size:9px}.plain-step .workflow-actions{display:grid;grid-template-columns:1fr}.plain-step .workflow-actions button,.plain-step .workflow-actions select{width:100%}.report-box .command-head{align-items:flex-start}.report-box button{min-width:0}}
+    @media(max-width:700px){.live-metrics{grid-template-columns:1fr 1fr}.plain-workflow{grid-template-columns:1fr}.queue-controls{margin-top:12px}.queue-controls select{width:100%;min-width:0}.command-title{font-size:21px}}
+    :root{color-scheme:dark;--bg:#111714;--panel:#19221e;--line:#35443c;--muted:#a1b0a7;--text:#edf3ee;--cyan:#83d6bd;--red:#ff796f;--amber:#f2bd66;--green:#73d39f}
+    body{background:#111714;background-image:radial-gradient(ellipse at 70% -30%,rgba(55,102,79,.24),transparent 55%);color:var(--text);font-family:"Aptos",Bahnschrift,"Segoe UI",sans-serif}
+    header{background:#171f1b;border-color:#35443c;color:#f5f7f3}h1{font-family:Cambria,Georgia,serif;font-weight:600}.sub,.muted{color:#a1b0a7}header .sub{color:#b4c3b9}
+    main{max-width:1680px;padding:20px 28px}.panel,.metric,.live-metric,.plain-step,.secondary-panel{background:#19221e;color:#edf3ee;border-color:#35443c;box-shadow:none}.panel h2,.metric strong,.live-metric strong,.plain-step strong{color:#edf3ee}
+    select,input,button{background:#202a25;color:#edf3ee;border-color:#43534a}button:hover{background:#26332c;color:#b8f1d9;border-color:#83d6bd}button.primary{background:#19765f;border-color:#2d997c;color:#fff}button.primary:hover{background:#208a6e;color:#fff}.queue-controls select{min-width:290px}
+    .live-banner{background:#1b3026;border-color:#31543f;border-left-color:#73d39f;color:#e4f3e8}.live-banner span,.live-metric span{color:#b1c2b5}.live-metric .metric-mark{background:#73d39f}
+    .command-center{border-top-color:#83d6bd}.command-title{color:#f2f6f1}.command-meta{color:#a7b6ac}.eyebrow{color:#83d6bd}
+    .pipeline-line span{background:#202b25;border-color:#39493f;color:#c5d3c9}.pipeline-line b{color:#758a7d}
+    .plain-step{background:#1d2722;border-color:#394840}.plain-step h3{color:#a7bcb0}.plain-step p{color:#c0cbc3}.plain-step.recommendation{border-top-color:#e9a94f}.plain-step.ticket{border-top-color:#65b8c2}.plain-step .approval-note{color:#f2c877}
+    .workflow-card{background:#1d2722;border-color:#394840}.workflow-card strong{color:#edf3ee}.workflow-card p{color:#c0cbc3}.technical-details{border-color:#35443c}.technical-details summary,.secondary-panel>summary{color:#b8c9bd}.report-box summary{color:#a6e2ca}
+    .topology-shell{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:0;border:1px solid #3a4b41;border-radius:5px;overflow:hidden;background:#151d19;margin-top:16px}
+    .topology-main{min-width:0;padding:14px 14px 10px}.topology-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.topology-heading h3{margin:0;color:#e8f0e9;font-size:14px}.topology-heading p{margin:3px 0 0;color:#a0afa5;font-size:11px}
+    .topology-legend{display:flex;gap:12px;flex-wrap:wrap;color:#aebbb2;font-size:10px}.legend-item{display:flex;align-items:center;gap:5px}.legend-dot{width:8px;height:8px;border-radius:50%;background:#55655a}.legend-dot.affected{background:#ff796f}.legend-dot.observed{background:#7dd5b1}
+    #dependencyGraph{display:block;width:100%;height:auto;min-height:320px;margin-top:8px;overflow:visible}.graph-grid{stroke:#314039;stroke-width:1;stroke-dasharray:3 7;opacity:.5}.graph-edge{fill:none;stroke:#506359;stroke-width:2;opacity:.75}.graph-edge.observed{stroke:#83d6bd;stroke-width:3;opacity:1}.graph-edge.impact{stroke:#ff796f;stroke-width:3;opacity:.95}.graph-node{cursor:pointer;outline:none}.graph-node rect{fill:#222d27;stroke:#53645a;stroke-width:1.5;transition:fill .16s,stroke .16s,filter .16s}.graph-node:hover rect,.graph-node:focus rect{stroke:#dbe9de;stroke-width:2}.graph-node .node-dot{fill:#66776a}.graph-node .node-name{fill:#e2ebe4;font-size:12px;font-weight:600}.graph-node .node-state{fill:#a3b2a7;font-size:9px}.graph-node.observed rect{fill:#18392e;stroke:#69bd98}.graph-node.observed .node-dot{fill:#83d6bd}.graph-node.affected rect{fill:#482923;stroke:#ff796f;stroke-width:2.5;filter:drop-shadow(0 0 8px rgba(255,121,111,.3))}.graph-node.affected .node-dot{fill:#ff796f}.graph-node.selected rect{stroke:#f2bd66;stroke-width:3}.edge-label{fill:#91a398;font-size:9px}
+    .graph-inspector{padding:16px;background:#1a241f;border-left:1px solid #35443c;min-width:0}.graph-inspector .inspector-label{color:#87a092;font-size:10px;letter-spacing:.07em;text-transform:uppercase}.graph-inspector h3{margin:5px 0 4px;color:#eff4ef;font:20px Cambria,Georgia,serif;overflow-wrap:anywhere}.graph-inspector p{margin:4px 0 12px;color:#adbbb1;font-size:11px;line-height:1.5}.inspector-stat{display:flex;justify-content:space-between;border-top:1px solid #35443c;padding:8px 0;color:#aebbb2;font-size:11px}.inspector-stat strong{color:#ecf2ed;font-weight:600}.evidence-list{display:grid;gap:7px;margin-top:12px}.evidence-event{padding:8px;background:#222d27;border:1px solid #394940;border-radius:3px}.evidence-event strong{display:block;color:#e3ece5;font-size:10px}.evidence-event span{display:block;margin-top:3px;color:#a6b5aa;font-size:10px;line-height:1.4}.evidence-event code{color:#83d6bd;font-size:9px;overflow-wrap:anywhere}.graph-controls{display:flex;gap:6px;align-items:center}.graph-controls button{width:30px;height:30px;padding:0;font-size:16px}.graph-controls span{font-size:10px;color:#9eaea3}
+    .response-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;margin-top:12px}.response-grid .plain-step{min-height:120px}.response-grid .plain-step p{max-width:72ch}
+    @media(max-width:950px){.topology-shell{grid-template-columns:1fr}.graph-inspector{border-left:0;border-top:1px solid #35443c}.topology-main{padding:12px}.response-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:650px){
+      header{padding:10px 12px;gap:8px;align-items:center}h1.plain-header{font-size:17px;white-space:nowrap}header .sub{font-size:10px;line-height:1.3;max-width:250px}.statusline{font-size:10px;gap:5px;white-space:nowrap}.statusline .dot{width:7px;height:7px}
+      main{padding:10px}.live-banner{padding:8px 10px;margin-bottom:8px;gap:8px}.live-banner strong{font-size:12px}.live-banner span{font-size:10px;line-height:1.3}
+      .live-metrics{gap:6px;margin-bottom:8px}.live-metric{padding:7px 6px;gap:6px}.live-metric .metric-mark{width:7px;height:7px}.live-metric strong{font-size:15px}.live-metric span{font-size:9px;line-height:1.2}
+      .panel{padding:11px}.command-title{font-size:19px}.command-meta{font-size:11px}.eyebrow{font-size:9px}.queue-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;margin-top:7px}.queue-controls select{min-width:0;width:100%;font-size:11px;padding:7px}.queue-controls button{font-size:11px;padding:7px}
+      .pipeline-line{gap:3px;margin-top:7px;font-size:9px}.pipeline-line span{padding:3px 4px}.pipeline-line b{font-size:8px}.topology-shell{margin-top:8px}.topology-main{padding:8px}.topology-heading{display:block}.topology-heading h3{font-size:13px}.topology-heading p{font-size:10px}.topology-legend{margin-top:6px;gap:8px;font-size:9px}.graph-controls{margin-top:6px}.graph-controls button{width:25px;height:25px;font-size:14px}.graph-controls span{font-size:9px}#dependencyGraph{min-height:unset;margin-top:2px}.graph-node .node-name{font-size:10px}.graph-node .node-state{font-size:8px}.graph-inspector{padding:9px}.graph-inspector h3{font-size:17px}.graph-inspector p,.inspector-stat{font-size:11px}.evidence-event{padding:6px}.evidence-event strong,.evidence-event span{font-size:10px}.evidence-event code{font-size:9px}
+      .response-grid{grid-template-columns:1fr;gap:7px;margin-top:8px}.plain-step{padding:10px}.plain-step h3{font-size:10px;margin-bottom:5px}.plain-step strong{font-size:17px}.plain-step p{font-size:11px;margin-top:5px}.plain-step .approval-note{font-size:10px}.workflow-actions{gap:5px;margin-top:6px}.workflow-actions button,.workflow-actions select{font-size:11px;padding:7px}.report-box{margin-top:7px}.report-box strong{font-size:14px}.technical-details{margin-top:8px}
+    }
+    .app-shell{display:grid;grid-template-columns:220px minmax(0,1fr);max-width:1760px;margin:0 auto;min-height:calc(100vh - 76px)}
+    .side-nav{padding:20px 12px;border-right:1px solid #35443c;background:#171f1b}
+    .nav-section{margin:0 8px 8px;color:#85978b;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+    .nav-button{display:flex;align-items:center;gap:10px;width:100%;margin:3px 0;padding:10px 11px;text-align:left;background:transparent;border-color:transparent;color:#bac8bd;font-size:12px}
+    .nav-button .nav-icon{width:20px;color:#8fb4a0;text-align:center;font-size:15px}.nav-button:hover,.nav-button.active{background:#26352d;border-color:#405548;color:#f1f7f1}.nav-button.active{box-shadow:inset 3px 0 #83d6bd}
+    .nav-count{margin-left:auto;color:#ffd27b;font-size:10px}.nav-footer{margin:26px 8px 0;padding-top:12px;border-top:1px solid #35443c;color:#8da094;font-size:10px;line-height:1.55}
+    .main-content{min-width:0;width:100%;max-width:none;margin:0;padding:18px 22px 40px}.page-view{display:none}.page-view.active{display:block}.page-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:4px 0 14px}.page-heading h2{margin:0;color:#f0f5f0;font:24px Cambria,Georgia,serif}.page-heading p{margin:4px 0 0;color:#a6b5aa;font-size:11px}
+    .overview-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr);gap:12px}.chart-panel{min-width:0;padding:14px;background:#19221e;border:1px solid #35443c;border-radius:5px}.chart-panel h3{margin:0;color:#e5eee7;font-size:12px}.chart-sub{margin:3px 0 8px;color:#98a89d;font-size:10px}.chart-wrap{width:100%;overflow:hidden}.chart-wrap svg{display:block;width:100%;height:auto}.chart-grid{stroke:#33443a;stroke-width:1;stroke-dasharray:3 5}.chart-line{fill:none;stroke:#83d6bd;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.chart-area{fill:rgba(131,214,189,.1)}.chart-axis{fill:#94a69a;font-size:9px}.chart-current{fill:#e9f1eb;font-size:10px;font-weight:700}.severity-list{display:grid;gap:12px;margin-top:15px}.severity-row{display:grid;grid-template-columns:62px 1fr 26px;align-items:center;gap:8px;color:#c3d0c6;font-size:10px}.severity-track{height:7px;background:#2b3830;border-radius:4px;overflow:hidden}.severity-fill{height:100%;border-radius:4px;background:#78c8a2}.severity-fill.high{background:#ef796d}.severity-fill.medium{background:#e8b65f}.overview-lower{display:grid;grid-template-columns:1.2fr 1fr;gap:12px;margin-top:12px}.activity-feed{display:grid;gap:0}.feed-item{display:grid;grid-template-columns:75px 8px minmax(0,1fr);gap:9px;padding:10px 2px;border-bottom:1px solid #2d3a32;align-items:start}.feed-item:last-child{border-bottom:0}.feed-time{color:#93a398;font-size:9px}.feed-dot{width:7px;height:7px;margin-top:4px;border-radius:50%;background:#79c89c}.feed-dot.alert{background:#f07c70}.feed-item strong{display:block;color:#e3ece5;font-size:10px}.feed-item span{display:block;margin-top:2px;color:#a4b2a7;font-size:10px;line-height:1.4}.incident-list{width:100%;border-collapse:collapse}.incident-list th,.incident-list td{padding:9px 7px;border-bottom:1px solid #35443c;text-align:left;font-size:10px}.incident-list th{color:#91a398;font-size:9px;text-transform:uppercase}.incident-list td{color:#d8e2da}.incident-list tr[data-incident]{cursor:pointer}.incident-list tr[data-incident]:hover{background:#233128}.severity-pill{display:inline-block;padding:3px 6px;border-radius:3px;background:#273a2e;color:#a7e0b7;font-size:9px}.severity-pill.high{background:#452a25;color:#ffaaa0}.severity-pill.medium{background:#473922;color:#f4d18e}
+    .incident-layout{display:grid;grid-template-columns:minmax(240px,.75fr) minmax(0,1.6fr);gap:12px}.incident-queue{align-self:start;max-height:calc(100vh - 190px);overflow:auto}.incident-queue .incident-list tr.selected{background:#26372e}.incident-queue .incident-list td:first-child{font-family:Consolas,monospace;font-size:9px}.incident-main .topology-shell{margin-top:0}.incident-main .response-grid{grid-template-columns:1fr 1fr}.incident-main .topology-heading{gap:8px}
+    .activity-page .secondary-panel{margin-top:0}.activity-page .secondary-panel+.secondary-panel{margin-top:10px}.topology-page .topology-shell{margin-top:0}.topology-page .topology-main{padding:18px}.topology-page #dependencyGraph{min-height:0}
+    @media(max-width:900px){.app-shell{grid-template-columns:64px minmax(0,1fr)}.side-nav{padding:14px 6px}.nav-section,.nav-label,.nav-count,.nav-footer{display:none}.nav-button{justify-content:center;padding:11px 5px}.nav-button .nav-icon{font-size:17px}.overview-grid,.overview-lower{grid-template-columns:1fr}.incident-layout{grid-template-columns:1fr}.incident-queue{max-height:280px}.incident-main .topology-shell{grid-template-columns:minmax(0,1fr) 220px}}
+    @media(max-width:650px){.app-shell{display:block;min-height:0}.side-nav{position:sticky;top:0;z-index:10;display:flex;justify-content:flex-start;gap:4px;width:100%;min-width:0;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;padding:5px 6px;border-right:0;border-bottom:1px solid #35443c}.nav-button{flex:0 0 62px;width:62px;min-width:62px;margin:0;padding:7px 5px;display:grid;gap:2px;justify-items:center;font-size:8px}.nav-button .nav-icon{font-size:14px}.nav-label{display:block}.main-content{padding:9px 9px 30px}.page-heading{align-items:flex-start;margin:5px 1px 9px}.page-heading h2{font-size:19px}.page-heading p{font-size:9px}.overview-grid,.overview-lower,.incident-layout{grid-template-columns:1fr}.chart-panel{padding:10px}.incident-queue{max-height:220px}.incident-main .topology-shell{grid-template-columns:1fr}.incident-main .graph-inspector{border-left:0;border-top:1px solid #35443c}.incident-main .topology-heading{display:block}.incident-main .topology-heading>div:last-child{margin-top:7px}.incident-main #dependencyGraph{min-height:unset}.incident-main .response-grid{grid-template-columns:1fr}.topology-page .topology-shell{grid-template-columns:1fr}.topology-page .topology-heading{display:block}.topology-page .graph-inspector{border-left:0;border-top:1px solid #35443c}}
+    .overview-lower .incident-list{min-width:0;table-layout:fixed}.overview-lower .incident-list th:first-child,.overview-lower .incident-list td:first-child{width:36%}.overview-lower .incident-list th:nth-child(2),.overview-lower .incident-list td:nth-child(2){width:29%}.overview-lower .incident-list th:nth-child(3),.overview-lower .incident-list td:nth-child(3){width:35%}
+    @media(max-width:650px){.incident-filters{display:grid;grid-template-columns:1fr 1fr;width:100%}.incident-filters select{width:100%;min-width:0;font-size:9px;padding:7px 5px}.incident-table-panel .chart-heading{display:block}.incident-table-wrap{max-width:100%;overflow-x:auto}.incident-table-wrap .incident-list{min-width:600px}.incident-table-wrap .incident-list th,.incident-table-wrap .incident-list td{padding:7px 5px;font-size:9px}.overview-lower .incident-list{min-width:0;table-layout:fixed}.overview-lower .incident-list th,.overview-lower .incident-list td{padding:5px 3px;font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+    @media(max-width:1100px){#page-incidents .response-grid{grid-template-columns:minmax(0,1fr);gap:10px}#page-incidents .incident-header{align-items:center}}
+    #page-incidents .report-box pre#reportMarkdown,#page-incidents .technical-details pre#incidentDetails,#page-incidents .technical-details pre#correlationDetails{background:#121a16;color:#d2e0d5;border:1px solid #35443c;border-radius:5px;max-height:270px;overflow:auto;overflow-wrap:anywhere;white-space:pre-wrap}
+    #page-incidents .incident-workspace{display:grid;grid-template-columns:minmax(340px,.9fr) minmax(0,1.9fr);align-items:start;gap:12px}
+    #page-incidents .response-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    #page-incidents .ticket-report-grid{grid-template-columns:minmax(250px,.82fr) minmax(0,1.18fr)}
+    #page-incidents .report-box .command-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
+    #page-incidents .report-box .command-head>div{min-width:0}
+    #page-incidents .report-box strong{display:block;max-width:28ch;font-size:15px;line-height:1.4;overflow-wrap:anywhere}
+    #page-incidents .report-box button{min-width:0;white-space:nowrap;align-self:start;padding:8px 10px;font-size:11px}
+    #page-incidents .incident-table-panel{min-width:0;max-height:calc(100vh - 190px);overflow:hidden}
+    #page-incidents .incident-table-panel .chart-heading{display:block}
+    #page-incidents .incident-filters{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}
+    #page-incidents .incident-filters select{width:100%;min-width:0}
+    #page-incidents .incident-table-wrap{max-height:calc(100vh - 350px);min-height:180px;overflow:auto}
+    #page-incidents .incident-table-wrap .incident-list{min-width:0;table-layout:fixed}
+    #page-incidents .incident-table-wrap .incident-list th,#page-incidents .incident-table-wrap .incident-list td{padding:8px 6px;font-size:9px}
+    #page-incidents .incident-table-wrap .incident-list th:nth-child(1),#page-incidents .incident-table-wrap .incident-list td:nth-child(1){width:35%;white-space:nowrap}
+    #page-incidents .incident-table-wrap .incident-list th:nth-child(2),#page-incidents .incident-table-wrap .incident-list td:nth-child(2){width:27%;overflow-wrap:anywhere}
+    #page-incidents .incident-table-wrap .incident-list th:nth-child(3),#page-incidents .incident-table-wrap .incident-list td:nth-child(3){width:15%}
+    #page-incidents .incident-table-wrap .incident-list th:nth-child(4),#page-incidents .incident-table-wrap .incident-list td:nth-child(4){width:23%;overflow-wrap:anywhere}
+    #page-incidents .command-center{min-width:0;margin:0}
+    #page-incidents .incident-header{display:flex;flex-wrap:wrap;gap:10px;padding:14px}
+    #page-incidents .incident-header .command-title{font-size:23px}
+    #page-incidents .incident-header .queue-controls{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto}
+    #page-incidents .incident-header .queue-controls select{width:100%;min-width:0}
+    #page-incidents .incident-section-label{margin-top:13px}
+    .incident-impact{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px;margin:10px 0;padding:10px 12px;background:#151e19;border:1px solid #35443c;border-radius:5px}
+    .incident-impact>div{min-width:0}
+    .incident-impact span{display:block;color:#91a398;font-size:9px;font-weight:700;text-transform:uppercase}
+    .incident-impact strong{display:block;margin-top:3px;color:#e0eae2;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+    @media(max-width:650px){.incident-impact{grid-template-columns:1fr 1fr;gap:8px}.incident-impact>div:first-child{grid-column:1/-1}}
+    .agent-run{margin:10px 0;padding:10px 12px;background:#151e19;border:1px solid #35443c;border-radius:5px}
+    .agent-run>summary{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;color:#dfeae1;font-size:11px;font-weight:700;list-style-position:inside}
+    .agent-run-summary{color:#91a398;font-size:10px;font-weight:400;text-align:right}
+    .agent-run-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}
+    .agent-run-item{min-width:0;padding:9px 10px;background:#1c2821;border:1px solid #35443c;border-radius:4px}
+    .agent-run-item header{display:flex;align-items:center;gap:7px;padding:0;border:0;background:none;color:#e6eee7}
+    .agent-run-state{width:7px;height:7px;flex:none;border-radius:50%;background:#73d39f}
+    .agent-run-item[data-state="waiting"] .agent-run-state{background:#f2bd66}
+    .agent-run-item[data-state="unavailable"] .agent-run-state{background:#85968a}
+    .agent-run-item strong{font-size:10px}.agent-run-item small{display:block;margin-top:3px;color:#94a69a;font-size:9px}
+    .agent-run-item p{margin:6px 0 0;color:#c2d0c5;font-size:10px;line-height:1.4;overflow-wrap:anywhere}
+    @media(max-width:900px){.agent-run-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:520px){.agent-run>summary{align-items:flex-start;flex-direction:column;gap:3px}.agent-run-summary{text-align:left}.agent-run-grid{grid-template-columns:minmax(0,1fr)}}
+    .activity-page .secondary-panel{background:#171f1b;border-color:#35443c}
+    .activity-page .secondary-panel>summary{color:#d8e6db;font-size:14px}
+    .activity-page .layout{grid-template-columns:minmax(260px,.8fr) minmax(0,1.35fr);gap:12px;align-items:start}
+    @media(min-width:1101px){.activity-page .layout>aside.panel{position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:auto}}
+    .activity-page .layout>.panel,.activity-page .layout>section>.panel{min-width:0;background:#19221e;border-color:#35443c;color:#edf3ee}
+    .sim-control-group{padding:0 0 13px;margin:0 0 13px;border-bottom:1px solid #35443c}
+    .sim-control-group h3{margin:0 0 4px;color:#e5eee7;font-size:13px}
+    .sim-control-group p{margin:0 0 9px;color:#aab9ae;font-size:11px;line-height:1.45}
+    .sim-control-group .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+    .sim-control-group .actions button{min-width:0;padding:9px 7px;font-size:11px;line-height:1.25}
+    .activity-page .control{margin:12px 0}
+    .activity-page .control>label{display:block;margin-bottom:6px;color:#c5d2c8;font-size:11px}
+    .activity-page #scenarioDescription{padding:8px 9px;background:#202b25;border-left:2px solid #83d6bd;color:#c3d0c6;font-size:10px;line-height:1.45}
+    .activity-page .sim-scope-note{margin-top:10px;padding:8px 9px;border:1px solid #405045;border-radius:4px;color:#aebeb2;font-size:10px;line-height:1.45}
+    .activity-page .metrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .activity-page .metric{min-width:0;background:#1a241f;border-color:#35443c;border-radius:5px}
+    .activity-page .metric small{color:#9eafa3}.activity-page .metric strong{color:#f0f5f0;font-size:18px;overflow-wrap:anywhere}
+    .activity-page .service-strip{gap:5px;margin:0 0 12px}
+    .activity-page .service{padding:4px 7px;background:#202a25;color:#bfd0c5;border-color:#405045;border-radius:4px;font-size:10px}
+    .activity-page .log-table{border-color:#35443c;border-radius:4px}
+    .activity-page .row{grid-template-columns:minmax(105px,.9fr) minmax(90px,1fr) 68px minmax(120px,1.8fr);gap:7px;padding:9px 8px;border-color:#303e36;font-size:10px}
+    .activity-page .row.header{background:#202a25;color:#9eafa3}
+    .activity-page .entry:hover{background:#202a25}
+    .activity-page .toolbar{grid-template-columns:minmax(120px,1.4fr) repeat(4,minmax(75px,1fr));gap:6px}
+    .activity-page .toolbar input,.activity-page .toolbar select{min-width:0;padding:7px;font-size:10px}
+    @media(max-width:1000px){.activity-page .layout{grid-template-columns:minmax(240px,.8fr) minmax(0,1.2fr)}.activity-page .toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:760px){.activity-page .layout{grid-template-columns:minmax(0,1fr)}.activity-page .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.activity-page .row{grid-template-columns:minmax(90px,1fr) 80px 60px minmax(90px,1.4fr)}}
+    @media(max-width:480px){.activity-page .row{grid-template-columns:minmax(95px,1fr) 70px 58px}.activity-page .row>*:nth-child(4){display:none}.activity-page .sim-control-group .actions button{font-size:10px}}
+    @media(max-width:1100px){#page-incidents .incident-workspace{grid-template-columns:minmax(0,1fr)}#page-incidents .incident-table-panel{max-height:none}#page-incidents .incident-table-wrap{max-height:300px}#page-incidents .incident-header{align-items:flex-start}#page-incidents .response-grid,#page-incidents .ticket-report-grid{grid-template-columns:minmax(0,1fr)}.activity-page .layout>aside.panel{position:static;max-height:none;overflow:visible}}
+    @media(max-width:650px){#page-incidents .incident-workspace{gap:9px}#page-incidents .incident-table-wrap{max-height:250px;min-height:0}#page-incidents .incident-header .command-title{font-size:20px}#page-incidents .pipeline-line{gap:4px}#page-incidents .pipeline-line span{padding:5px 6px;font-size:9px}}
+    #page-incidents .incident-workspace{grid-template-columns:minmax(0,1fr);gap:14px}
+    #page-incidents .incident-table-panel{max-height:none}
+    #page-incidents .incident-table-wrap{max-height:320px}
+    #page-incidents .response-grid,#page-incidents .ticket-report-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+    #page-incidents .response-grid .plain-step,#page-incidents .report-box{width:100%}
+    #page-incidents .report-box .command-head{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+    #page-incidents .report-box strong{max-width:48ch;font-size:17px}
+    @media(max-width:650px){#page-incidents .incident-workspace{gap:9px}#page-incidents .incident-table-wrap{max-height:250px}#page-incidents .report-box strong{font-size:14px}}
+    .list-pagination{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:9px;border-top:1px solid #35443c}
+    .list-pagination label{display:flex;align-items:center;gap:6px;color:#aab9ae;font-size:10px}
+    .list-pagination select{width:auto;min-width:60px;padding:5px 7px;font-size:10px}
+    .list-pagination button{padding:6px 9px;font-size:10px}
+    .list-pagination button:disabled{opacity:.42;cursor:default}
+    .pagination-range{margin-right:auto;color:#b9c9bd;font-size:10px;font-variant-numeric:tabular-nums}
+    @media(max-width:520px){.list-pagination{justify-content:space-between;gap:5px}.pagination-range{width:100%;margin:0}.list-pagination button{flex:1}}
+    .action-toast{position:fixed;right:20px;bottom:20px;z-index:2000;display:grid;grid-template-columns:10px minmax(0,1fr) 30px;gap:11px;align-items:start;width:min(420px,calc(100vw - 28px));padding:13px 14px;background:#1a2821;border:1px solid #486052;border-left:4px solid #83d6bd;border-radius:6px;box-shadow:0 12px 38px rgba(0,0,0,.45);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+    .action-toast.visible{opacity:1;transform:translateY(0);pointer-events:auto}.action-toast-mark{width:9px;height:9px;margin-top:5px;border-radius:50%;background:#83d6bd}.action-toast h2{margin:0;color:#edf5ee;font-size:13px}.action-toast p{margin:3px 0 0;color:#bdcbbf;font-size:11px;line-height:1.45}.action-toast button{width:28px;height:28px;padding:0;background:transparent;border:0;color:#bdcbbf;font-size:18px;line-height:1}.action-toast[data-tone="success"]{border-left-color:#73d39f}.action-toast[data-tone="success"] .action-toast-mark{background:#73d39f}.action-toast[data-tone="error"]{border-color:#744741;border-left-color:#ff796f}.action-toast[data-tone="error"] .action-toast-mark{background:#ff796f}.action-toast[data-tone="warning"]{border-left-color:#f2bd66}.action-toast[data-tone="warning"] .action-toast-mark{background:#f2bd66}
+    @media(max-width:600px){.action-toast{right:12px;bottom:12px}}
+    .side-nav{max-height:calc(100vh - 76px);overflow-y:auto;overscroll-behavior:contain}.studio-nav-section{margin-top:20px;padding-top:14px;border-top:1px solid #35443c}
+    .studio-page{min-width:0}.studio-page>.page-heading{align-items:flex-end}.studio-page>.page-heading p{max-width:80ch}
+    .studio-routine-layout{display:grid;grid-template-columns:minmax(220px,.65fr) minmax(0,1.8fr);gap:12px;align-items:start}.studio-routine-sidebar,.studio-routine-editor{min-width:0}.studio-panel-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.studio-panel-heading h3,.studio-canvas-heading h3{margin:0;color:#e5eee7;font-size:13px}.studio-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.studio-actions button,.studio-panel-heading button{padding:7px 10px;font-size:10px}
+    .studio-routine-list,.registry-list{display:grid;gap:6px}.studio-list-item{width:100%;padding:9px 10px;text-align:left;background:#1b2620;border:1px solid #35443c;border-radius:4px;color:#dce7de}.studio-list-item.selected{border-color:#83d6bd;background:#203129}.studio-list-item strong{display:block;font-size:11px}.studio-list-item small{display:block;margin-top:3px;color:#95a79a;font-size:9px}.studio-routine-fields,.studio-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}.studio-routine-fields label,.studio-form-grid label,.studio-block-label{display:grid;gap:5px;color:#b8c8bc;font-size:10px}.studio-routine-fields label:nth-child(3){grid-column:1/-1}.studio-routine-fields input,.studio-routine-fields textarea,.studio-form-grid input,.studio-form-grid select,.studio-block-label textarea,.node-field input,.node-field select,.node-field textarea{width:100%;min-width:0;background:#121a16;border:1px solid #3b4b41;color:#e4eee6;border-radius:4px;padding:7px;font:11px/1.4 "Aptos",Bahnschrift,"Segoe UI",sans-serif}.studio-routine-fields textarea,.studio-block-label textarea,.node-field textarea{resize:vertical;font-family:Consolas,monospace;font-size:10px}.studio-canvas-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:12px 0}.studio-canvas-heading p{margin:3px 0 0}.routine-canvas{display:grid;gap:8px;max-width:980px;margin:0 auto}.routine-node{position:relative;padding:11px;background:#1b2720;border:1px solid #405247;border-left:3px solid #83d6bd;border-radius:5px}.routine-node:not(:last-child)::after{position:absolute;bottom:-10px;left:19px;width:2px;height:9px;background:#71857a;content:""}.routine-node[data-node-type="decision"]{border-left-color:#e9b65e}.routine-node[data-node-type="approval"]{border-left-color:#65b8c2}.routine-node[data-node-type="tool"]{border-left-color:#9bb2e0}.routine-node-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}.routine-node-title{display:flex;gap:8px;align-items:center;min-width:0}.routine-node-title strong{color:#e5eee7;font-size:11px}.routine-node-title span{color:#90a397;font-size:9px}.node-order-actions{display:flex;gap:4px}.node-order-actions button{padding:3px 7px;font-size:10px}.routine-node-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:9px}.node-field{display:grid;gap:4px;color:#aab9ae;font-size:9px}.node-field.wide{grid-column:span 2}.routine-node-footer{display:flex;justify-content:flex-end;margin-top:7px}.routine-node-footer button{padding:4px 8px;font-size:9px}.studio-message{min-height:18px;margin:8px 0;color:#a7d9bd;font-size:10px}.studio-two-column{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(0,1.5fr);gap:12px;align-items:start}.studio-form{display:grid;gap:9px;min-width:0}.studio-form.empty{display:block;color:#9aa99e;font-size:11px}.studio-form pre,.studio-results pre,.studio-output{max-width:100%;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#121a16;border:1px solid #35443c;border-radius:4px;padding:10px;color:#d2e0d5;font:10px/1.5 Consolas,monospace}.studio-profile-row{display:grid;grid-template-columns:130px minmax(0,1fr);gap:8px;padding:7px 0;border-bottom:1px solid #2e3c33;color:#d3ded5;font-size:10px}.studio-profile-row span:first-child{color:#91a398}.studio-block-label{margin:10px 0}.studio-output{max-height:300px}.studio-results{display:grid;gap:7px}.studio-result-row{padding:9px;background:#1c2821;border:1px solid #35443c;border-radius:4px;color:#d4e0d7;font-size:10px}.studio-result-row strong{display:block;color:#e7f0e9;font-size:11px}.studio-result-row p{margin:4px 0 0;color:#a9b9ae;line-height:1.45}.studio-form-grid .toggle-field,.toggle-field{display:flex;align-items:center;gap:7px;color:#bfd0c5;font-size:10px}.toggle-field input{width:auto}.studio-run-task{padding:9px;background:#1c2821;border:1px solid #35443c;border-radius:4px}.studio-run-task header{display:flex;justify-content:space-between;gap:8px;padding:0;background:none;border:0;color:#e7efe8}.studio-run-task pre{margin:7px 0 0;max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#111815;color:#c5d3c9;padding:8px;border-radius:3px;font:9px/1.4 Consolas,monospace}
+    .toggle-field[hidden]{display:none}
+    #cxOverview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:18px 0}
+    #cxOverview>div{display:grid;gap:4px;padding:12px 0;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+    #cxOverview strong{font-size:24px;color:var(--text);line-height:1.2}
+    #page-customer-intelligence .chart-panel{margin-bottom:18px}
+    .cx-form-submit-row{display:flex;justify-content:flex-end;margin-top:10px}
+    #cxSubmit{min-height:36px;padding:7px 14px;font-size:11px;line-height:1.2;white-space:nowrap}
+    #cxInbox small{display:block;overflow-wrap:anywhere;line-height:1.6}
+    #cxInvestigation,#cxApprovals{min-width:0;overflow-wrap:anywhere}
+    #cxOverview button{display:grid;text-align:left;gap:4px;padding:12px 0;border:0;border-top:1px solid var(--line);background:transparent;color:var(--muted);font-size:11px}
+    #cxOverview button:hover{border-color:var(--cyan);color:var(--cyan)}
+    .cx-workbench{border-top:1px solid var(--line);padding-top:20px;margin:12px 0 28px;scroll-margin-top:20px}
+    .cx-investigation-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:164px;gap:10px;margin-bottom:20px}
+    .cx-issue-row{position:relative;min-width:0}
+    .cx-issue{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:7px;box-sizing:border-box;height:100%;text-align:left;padding:14px 46px 14px 14px;background:#1b2822;border:1px solid #42554a;border-radius:5px;min-width:0;width:100%;cursor:pointer}
+    .cx-issue[aria-pressed="true"]{border-color:#86d3bc;background:#23382e}.cx-issue strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;overflow-wrap:anywhere;font-size:12px;line-height:1.5}.cx-issue small{color:#a7baad;overflow-wrap:anywhere}
+    .cx-issue-remove{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:28px;height:28px;padding:0;color:#edb3a5;border:1px solid #60463e;border-radius:4px;background:#291f1d;font-size:20px;line-height:1;cursor:pointer}
+    .cx-issue-remove:hover{border-color:#edb3a5;background:#382622}
+    .cx-flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;margin:20px 0 24px;align-items:stretch}
+    .cx-stage{position:relative;display:grid;align-content:start;gap:9px;padding:14px 10px;text-align:left;min-height:145px;border:1px solid #45584b;border-radius:5px;background:#1b2921;min-width:0}
+    .cx-stage:not(:last-child)::after{content:'>';position:absolute;right:-14px;top:44%;color:#96b6a4;font-size:16px}
+    .cx-stage strong{font-size:12px;line-height:1.4}.cx-stage small{font-size:10px;color:#b1c2b6;line-height:1.5}.cx-stage .cx-stage-status{font-size:9px;text-transform:uppercase;color:#92ddbd}
+    .cx-stage[data-state="waiting_approval"]{border-color:#c9974e}.cx-stage[data-state="waiting_approval"] .cx-stage-status{color:#f3c27b}
+    .cx-stage[data-state="failed"]{border-color:#d97c72}.cx-stage[aria-pressed="true"]{outline:2px solid #9adbc6;outline-offset:3px}
+    .cx-stage[data-state="running"]{border-color:#8ebcdc;animation:cx-active 1.4s ease-in-out infinite}
+    @keyframes cx-active{50%{box-shadow:0 0 0 3px rgba(142,188,220,.2)}}
+    .cx-detail-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:0}.cx-detail-section{min-width:0;padding:20px 0;border-top:1px solid var(--line)}
+    .cx-answer{grid-column:1/-1}.cx-answer>p,.cx-answer .cx-evidence{max-width:90ch}.cx-supporting{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}.cx-answer .toggle-field{margin:18px 0 12px}.cx-answer>button{margin-bottom:4px}
+    @media(max-width:650px){.cx-supporting{grid-template-columns:minmax(0,1fr);gap:0}}
+    .cx-detail-section h4{font-size:13px;margin:0 0 10px;color:#e3eee6}.cx-detail-section p{font-size:12px;line-height:1.8;color:#c5d4c9}
+    .cx-review{padding:12px 0;border-bottom:1px solid #34463a}.cx-review blockquote{margin:8px 0;font-size:12px;line-height:1.8;white-space:pre-wrap;color:#d5e0d8}.cx-review small{color:#a3b8aa}
+    .cx-answer{border-left:3px solid #d6ab66;padding-left:16px}.cx-evidence{padding:12px 0;border-bottom:1px solid #34463a}.cx-evidence p{white-space:pre-wrap}.cx-evidence a{color:#9edccb}
+    .cx-run-state{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px;color:#b4c6b8}.cx-run-state strong{color:#edc487}.cx-agent-detail{padding:16px 0;border-top:1px solid var(--line)}
+    #cxInvestigateRun{white-space:normal}.cx-detail-section pre,.cx-agent-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow:auto;background:#111b15;padding:12px;font-size:10px}
+    @media(max-width:1150px){.cx-flow{grid-template-columns:repeat(4,minmax(0,1fr))}.cx-stage:nth-child(4)::after{content:none}}
+    @media(max-width:650px){.cx-investigation-list,.cx-detail-layout{grid-template-columns:minmax(0,1fr)}.cx-flow{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.cx-stage{min-height:132px}.cx-stage:nth-child(even)::after{content:none}.cx-stage:nth-child(4)::after{content:none}.cx-detail-layout{gap:0}}
+    @media(prefers-reduced-motion:reduce){.cx-stage[data-state="running"]{animation:none}}
+    @media(max-width:650px){#cxOverview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:1000px){.studio-routine-layout,.studio-two-column{grid-template-columns:minmax(0,1fr)}.studio-routine-list{grid-template-columns:repeat(2,minmax(0,1fr))}.routine-node-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:650px){.side-nav{max-height:none}.studio-routine-list{grid-template-columns:minmax(0,1fr)}.studio-routine-fields,.studio-form-grid{grid-template-columns:minmax(0,1fr)}.studio-routine-fields label:nth-child(3){grid-column:auto}.studio-page>.page-heading{display:block}.studio-page>.page-heading>button{margin-top:9px}.studio-panel-heading{align-items:flex-start;flex-direction:column}.studio-actions{justify-content:flex-start}.cx-form-submit-row{justify-content:stretch}#cxSubmit{width:100%}.routine-node-fields{grid-template-columns:minmax(0,1fr)}.node-field.wide{grid-column:auto}.studio-profile-row{grid-template-columns:95px minmax(0,1fr)}}
   </style>
 </head>
 <body>
   <header>
-    <div><h1><span>OPS SIGNAL</span> / Synthetic Log Lab</h1><div class="sub">Interconnected service logs for simulator testing — synthetic data only</div></div>
+    <div><h1 class="plain-header"><span>OPS SIGNAL</span> / Live Operations</h1><div class="sub">DEMO MODE · Synthetic service environment · No production systems connected</div></div>
     <div class="statusline"><i id="runningDot" class="dot"></i><span id="runningLabel">Connecting…</span></div>
   </header>
-  <main>
-    <div class="layout">
-      <aside class="panel">
-        <h2>Simulation controls</h2>
-        <div class="actions">
-          <button id="startButton" class="primary">Start generation</button>
-          <button id="stopButton">Stop generation</button>
+  <aside id="actionToast" class="action-toast" data-tone="info" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"><i class="action-toast-mark" aria-hidden="true"></i><div><h2 id="actionToastTitle">Working</h2><p id="actionToastMessage"></p></div><button id="dismissActionToast" type="button" aria-label="Dismiss status message">×</button></aside>
+  <div class="app-shell">
+    <nav class="side-nav" aria-label="Main navigation">
+      <div class="nav-section">WORKSPACE</div>
+      <button class="nav-button active" data-page="overview"><span class="nav-icon">◫</span><span class="nav-label">Overview</span></button>
+      <button class="nav-button" data-page="incidents"><span class="nav-icon">◉</span><span class="nav-label">Incidents</span><span id="navIncidentCount" class="nav-count">0</span></button>
+      <button class="nav-button" data-page="topology"><span class="nav-icon">⌘</span><span class="nav-label">Service map</span></button>
+      <button class="nav-button" data-page="activity"><span class="nav-icon">≋</span><span class="nav-label">Activity</span></button>
+      <button class="nav-button" data-page="customer-intelligence"><span class="nav-icon">+</span><span class="nav-label">Customer Intelligence</span></button>
+      <div class="nav-section studio-nav-section">AI OPERATIONS STUDIO</div>
+      <button class="nav-button" data-page="routine-studio"><span class="nav-icon">⇢</span><span class="nav-label">Routine Studio</span></button>
+      <button class="nav-button" data-page="agent-registry"><span class="nav-icon">◉</span><span class="nav-label">Agent Registry</span></button>
+      <button class="nav-button" data-page="micro-agent-registry"><span class="nav-icon">⠿</span><span class="nav-label">Micro-Agent Registry</span></button>
+      <button class="nav-button" data-page="tool-registry"><span class="nav-icon">⚒</span><span class="nav-label">Tool Registry</span></button>
+      <button class="nav-button" data-page="agent-memory"><span class="nav-icon">▤</span><span class="nav-label">Agent Memory</span></button>
+      <button class="nav-button" data-page="execution-monitor"><span class="nav-icon">≋</span><span class="nav-label">Execution Monitor</span></button>
+      <button class="nav-button" data-page="agent-evaluation"><span class="nav-icon">✓</span><span class="nav-label">Agent Evaluation</span></button>
+      <div class="nav-footer">OPS SIGNAL<br>Demo environment<br>Local synthetic services</div>
+    </nav>
+    <main class="main-content">
+    <section id="page-overview" class="page-view active">
+    <div class="page-heading"><div><h2>Operations overview</h2><p>Live view of service health and issues that need operator attention.</p></div><button id="overviewSimulate" class="primary">Simulate an issue</button></div>
+    <div class="live-banner"><i class="dot"></i><div><strong>Demo environment · Monitoring is running</strong><span>New simulated issues automatically start investigation and recommend a next step. No production services are connected.</span></div></div>
+    <div class="live-metrics">
+      <div class="live-metric"><i class="metric-mark"></i><div><strong id="openIncidentCount">0</strong><span>Incidents in queue</span></div></div>
+      <div class="live-metric"><i class="metric-mark"></i><div><strong id="activeAlertCount">0</strong><span>Actionable signals</span></div></div>
+      <div class="live-metric"><i class="metric-mark"></i><div><strong id="processedEventCount">0</strong><span>Events monitored</span></div></div>
+    </div>
+    <div class="overview-grid">
+      <section class="chart-panel"><div class="chart-heading"><div><h3>Service error rate</h3><p class="chart-sub">Recent simulator readings · percentage of requests</p></div><strong id="errorChartCurrent" class="chart-current">0.0%</strong></div><div class="chart-wrap"><svg id="errorTrendChart" viewBox="0 0 720 190" role="img" aria-label="Recent service error rate chart"></svg></div></section>
+      <section class="chart-panel"><div class="chart-heading"><div><h3>Resource pressure</h3><p class="chart-sub">Latest simulated utilization</p></div></div><div id="resourceBars" class="severity-list"></div></section>
+    </div>
+    <div class="overview-lower">
+      <section class="chart-panel"><div class="chart-heading"><div><h3>Recent incidents</h3><p class="chart-sub">Trace-related signals are grouped into one issue.</p></div><button class="text-action" data-open-page="incidents">View all</button></div><table class="incident-list"><thead><tr><th>Issue</th><th>Service</th><th>State</th></tr></thead><tbody id="overviewIncidentRows"><tr><td colspan="3" class="muted">Waiting for monitoring…</td></tr></tbody></table></section>
+      <section class="chart-panel"><div class="chart-heading"><div><h3>Response flow</h3><p class="chart-sub">What the system does after it detects an issue</p></div></div><div class="activity-feed" id="overviewActivity"><div class="feed-item"><span class="feed-time">LIVE</span><i class="feed-dot"></i><div><strong>Monitoring connected</strong><span>Incoming events are checked for related failures and anomalies.</span></div></div><div class="feed-item"><span class="feed-time">NEXT</span><i class="feed-dot"></i><div><strong>Automatic investigation</strong><span>Related service signals are grouped, evidence is collected, and a response is proposed.</span></div></div><div class="feed-item"><span class="feed-time">OPERATOR</span><i class="feed-dot"></i><div><strong>You choose the handoff</strong><span>Review the response, then create a local ticket only when you need one.</span></div></div></div></section>
+    </div>
+    </section>
+    <section id="page-incidents" class="page-view">
+    <div class="page-heading"><div><h2>Incidents</h2><p>Review the issue, service evidence, possible cause, and recommended next step.</p></div></div>
+    <div class="incident-workspace">
+    <section class="chart-panel incident-table-panel"><div class="chart-heading"><div><h3>Prioritized incident queue</h3><p class="chart-sub">Highest severity and unreviewed issues appear first.</p><p id="incidentQueueSummary" class="queue-summary"></p></div><div class="incident-filters"><select id="incidentStateFilter" aria-label="Filter incidents by status"><option value="open">Open issues</option><option value="all">All statuses</option><option value="pending_review">Pending review</option><option value="acknowledged">Acknowledged</option><option value="closed">Closed</option></select><select id="incidentSeverityFilter" aria-label="Filter incidents by severity"><option value="all">All severity</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div></div><div class="incident-table-wrap"><table class="incident-list"><thead><tr><th>Issue</th><th>Service</th><th>Severity</th><th>Status</th></tr></thead><tbody id="incidentsTableBody"></tbody></table></div><div class="list-pagination" aria-label="Incident queue pagination"><label for="incidentPageSize">Rows<select id="incidentPageSize"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select></label><span id="incidentPageLabel" class="pagination-range">Page 1 of 1</span><button id="incidentPrevPage" type="button" aria-label="Previous incident page" disabled>Previous</button><button id="incidentNextPage" type="button" aria-label="Next incident page" disabled>Next</button></div></section>
+    <section class="panel kb-panel command-center">
+      <div class="command-head incident-header">
+        <div><div class="eyebrow">SELECTED INCIDENT</div><h2 class="command-title">Investigation and response</h2><div id="orchestratorStatus" class="command-meta">Waiting for monitoring…</div></div>
+        <div class="queue-controls"><select id="incidentSelect" aria-label="Choose an incident"><option value="">No incidents yet</option></select><button id="guidedDemo" title="Create a synthetic issue to demonstrate the live workflow">Simulate an issue</button></div>
+      </div>
+      <div id="incidentImpact" class="incident-impact" aria-live="polite"><div><span>Affected services</span><strong id="impactServices">Waiting for incident</strong></div><div><span>Grouped activity</span><strong id="impactSignals">0 signals · 0 traces</strong></div><div><span>Latest signal</span><strong id="impactRecency">No incident selected</strong></div></div>
+      <div class="pipeline-line" aria-label="Automatic incident workflow"><span class="pipeline-step" data-step="1">Issue detected</span><b>→</b><span class="pipeline-step" data-step="2">Evidence checked</span><b>→</b><span class="pipeline-step" data-step="3">Response ready</span><b>→</b><span class="pipeline-step" data-step="4">Operator handoff</span></div>
+      <details id="agentRunDetails" class="agent-run"><summary><span>Agent run</span><span id="agentRunSummary" class="agent-run-summary">Select an incident to see agent outputs</span></summary><div id="agentRunGrid" class="agent-run-grid"></div></details>
+      <div id="demoRunStatus" class="demo-run" role="status" aria-live="polite"></div>
+      <div class="incident-section-label">Assessment and operator decision</div>
+      <div class="response-grid">
+        <article class="plain-step"><h3>Possible explanation · not confirmed</h3><strong id="rcaTitle">No active incident</strong><p id="rcaRationale">Monitoring is watching service signals. When an issue appears, its evidence-backed hypothesis will show here.</p><div class="investigation-details"><span>Incident trace timeline</span><ol id="investigationEvidence" class="incident-timeline"><li>Events will appear when an incident is selected.</li></ol><details id="timelineRemainder" class="timeline-more" hidden><summary id="timelineRemainderLabel">Show remaining events</summary><ol id="additionalTimeline" class="incident-timeline"></ol></details></div><span id="rcaRefs" class="muted"></span></article>
+        <article class="plain-step recommendation"><h3>Recommended response</h3><strong id="actionTitle">Waiting for an issue</strong><p id="actionDescription">The system will recommend a next step after reviewing the evidence.</p><div class="response-context"><div><span>Target</span><strong id="responseTarget">Waiting for incident</strong></div><div><span>Why this step</span><p id="responseBasis">The evidence-based decision basis will appear here.</p></div><div><span>Verify by</span><p id="responseVerification">A recovery check will appear here.</p></div></div><div class="workflow-actions"><button id="approveAction" class="primary" disabled>Approve simulated action</button><button id="rejectAction" disabled>Reject recommendation</button></div><p class="approval-note">Approval only runs a demo dry run. No production service is changed.</p></article>
+      </div>
+      <div class="response-grid ticket-report-grid">
+        <article class="plain-step ticket"><h3>Ticket</h3><strong id="ticketTitle">Not created</strong><p id="ticketDescription">Create a ticket when this issue needs to be handed off or tracked.</p><div class="workflow-actions"><button id="createTicket" class="primary" disabled>Create ticket</button><select id="ticketStatus" aria-label="Ticket status" disabled><option value="open">Open</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option><option value="closed">Closed</option></select></div><div id="ticketCreateNote" class="ticket-create-note">No ticket is created unless an operator requests it.</div></article>
+        <div class="workflow-card report-box"><div class="command-head"><div><div class="micro">INCIDENT SUMMARY</div><strong id="reportSummary">No incident selected</strong></div><button id="downloadReport" disabled>Download summary</button></div><details><summary>View handoff summary</summary><pre id="reportMarkdown" class="kb-results">A summary will be prepared when an issue is detected.</pre></details></div>
+      </div>
+      <details class="technical-details"><summary>Technical details and raw correlation evidence</summary><pre id="incidentDetails">Incident evidence appears here.</pre><h3>Correlation evidence</h3><pre id="correlationDetails">Correlation evidence appears here.</pre></details>
+      <div class="workflow-actions"><button id="acknowledgeIncident" disabled>Acknowledge incident</button><button id="closeIncident" disabled>Close incident</button></div>
+      <div id="orchestratorError" class="error-message"></div>
+    </section>
+    </div>
+    </section>
+    <section id="page-topology" class="page-view topology-page">
+      <div class="page-heading"><div><h2>Service map</h2><p>See how the selected issue relates to the simulator’s service dependencies. Select a node to inspect trace evidence.</p></div><select id="topologyIncidentSelect" aria-label="Incident for service map"><option value="">Choose an incident</option></select></div>
+      <div class="topology-shell">
+        <div class="topology-main">
+          <div class="topology-heading"><div><h3>Service dependency map</h3><p id="topologySubtitle">Select an incident to inspect affected and trace-observed services.</p></div><div><div class="topology-legend"><span class="legend-item"><i class="legend-dot affected"></i>Affected service</span><span class="legend-item"><i class="legend-dot observed"></i>Seen in this request</span><span class="legend-item"><i class="legend-dot"></i>Other dependency</span></div><div class="graph-controls"><button id="graphZoomOut" aria-label="Zoom out" title="Zoom out">−</button><button id="graphZoomIn" aria-label="Zoom in" title="Zoom in">+</button><button id="graphFit" aria-label="Fit graph" title="Fit graph">⌂</button><span>Select a node to see its trace events</span></div></div></div>
+          <svg id="dependencyGraph" viewBox="0 0 960 470" role="img" aria-label="Interactive service dependency graph"><defs><marker id="graphArrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#718379"></path></marker></defs><g id="graphCanvas"></g></svg>
         </div>
-        <div class="control"><label for="scenario">Incident scenario</label>
+        <aside class="graph-inspector" aria-live="polite"><div class="inspector-label">Selected service</div><h3 id="graphServiceTitle">Waiting for incident</h3><p id="graphServiceSummary">Service and trace evidence will appear here when an incident is selected.</p><div class="inspector-stat"><span>Graph state</span><strong id="graphServiceState">Idle</strong></div><div class="inspector-stat"><span>Trace events</span><strong id="graphEventCount">0</strong></div><div class="evidence-list" id="graphEvidence"><div class="evidence-event"><span>No trace events selected.</span></div></div></aside>
+      </div>
+      <div class="chart-panel topology-note"><strong>About this map</strong><span>Links represent the simulator’s configured dependencies, not discovered production infrastructure.</span></div>
+    </section>
+    <section id="page-activity" class="page-view activity-page">
+      <div class="page-heading"><div><h2>Activity &amp; diagnostics</h2><p>Raw events and connector details for technical investigation.</p></div></div>
+      <details class="secondary-panel"><summary>Monitoring details, service health, and simulator controls</summary><div class="layout">
+      <aside class="panel">
+        <h2>Simulator controls</h2>
+        <div class="sim-control-group"><h3>Traffic generation</h3><p>Start or pause synthetic requests and service events.</p><div class="actions">
+          <button id="startButton" class="primary">Start traffic</button>
+          <button id="stopButton">Pause traffic</button>
+        </div></div>
+        <div class="sim-control-group"><h3>Test an incident</h3><p>Choose a failure pattern, then inject it into the demo environment.</p>
+        <div class="control"><label for="scenario">Failure pattern</label>
           <select id="scenario">
             <option value="normal">Normal operations</option>
             <option value="code_bug">A · Application code bug</option>
@@ -56,18 +369,18 @@
           </select>
         </div>
         <div class="actions">
-          <button id="triggerButton" class="primary">Trigger scenario</button>
-          <button id="recoverButton">Trigger recovery</button>
+          <button id="triggerButton" class="primary">Inject selected failure</button>
+          <button id="recoverButton">Start recovery</button>
           <button id="resetButton" class="danger">Reset simulator</button>
-        </div>
-        <div class="control"><label for="frequency">Request flows per second: <span id="frequencyLabel">1</span></label>
+        </div></div>
+        <div class="control"><label for="frequency">Synthetic request rate: <span id="frequencyLabel">1</span> per second</label>
           <input id="frequency" type="range" min="0.2" max="20" step="0.2" value="1">
         </div>
         <div id="scenarioDescription" class="muted"></div>
-        <div class="muted">Scenario labels are control-panel state only; generated operational logs do not include the selected cause.</div>
+        <div class="sim-scope-note">Demo only. No production services are connected. Reset clears simulator counters and resource pressure; existing incidents and log history remain.</div>
         <div id="errorMessage" class="error-message"></div>
         <div class="control"><label>Simulated service dependencies</label>
-          <div class="muted">Gateway → Auth → Telemetry → PostgreSQL / Redis → Kafka → Notifications<br>Telemetry and platform components run in simulated Kubernetes; releases come from the simulated pipeline.</div>
+          <div class="muted">Gateway → Auth → Telemetry → PostgreSQL / Redis → Kafka → Notifications. These are simulated dependencies, not connected services.</div>
         </div>
       </aside>
       <section>
@@ -89,10 +402,11 @@
             <select id="timeFilter"><option value="0">All time</option><option value="5">Last 5 minutes</option><option value="15">Last 15 minutes</option><option value="60">Last hour</option></select>
           </div>
           <div id="logTable" class="log-table"><div class="empty">Starting the live event stream…</div></div>
+          <div class="list-pagination log-pagination" aria-label="Log explorer pagination"><label for="logPageSize">Rows<select id="logPageSize"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select></label><span id="logPageLabel" class="pagination-range">Page 1 of 1</span><button id="logPrevPage" type="button" aria-label="Previous log page" disabled>Previous</button><button id="logNextPage" type="button" aria-label="Next log page" disabled>Next</button></div>
         </div>
       </section>
-    </div>
-    <section class="panel kb-panel">
+    </div></details>
+    <details class="secondary-panel"><summary>Knowledge base, connector, and agent diagnostics</summary><section class="panel kb-panel">
       <h2>AG-02 · Knowledge Base Agent</h2>
       <div id="kbStatus" class="kb-status">Checking document and log stores…</div>
       <div class="kb-grid">
@@ -111,7 +425,7 @@
           <pre id="logResults" class="kb-results">Log search results appear here.</pre>
         </div>
       </div>
-      <div class="kb-status">MA-06 graph relationships are deferred. MA-07 flags provenance/conflicts and only stores incident learning after human approval. Retrieval is not an RCA conclusion.</div>
+      <div class="kb-status">MA-06 provides a bounded local service relationship graph for the POC. MA-07 flags provenance/conflicts and only stores incident learning after human approval. Retrieval is not an RCA conclusion.</div>
       <div id="kbError" class="error-message"></div>
     </section>
     <section class="panel kb-panel">
@@ -142,14 +456,110 @@
           <div class="muted">Demo reviews are generated test data, not genuine customer feedback. Sentiment is a rule-based baseline; no model is loaded.</div>
         </div>
       </div>
-      <div class="kb-status">MA-06 knowledge graph stays deferred. Monitoring outputs are events and evidence, not confirmed root-cause findings.</div>
+      <div class="kb-status">MA-06 graph context is local and static for the POC. Monitoring outputs are events and evidence, not confirmed root-cause findings.</div>
       <div id="monitorError" class="error-message"></div>
+    </section></details>
+    </section>
+    <section id="page-routine-studio" class="page-view studio-page">
+      <div class="page-heading"><div><h2>Routine Studio</h2><p>Build and run persisted local workflows; each task records input, output, evidence, status, and timing.</p></div><button id="newRoutineButton" class="primary">New routine</button></div>
+      <div class="studio-routine-layout"><aside class="chart-panel studio-routine-sidebar"><div class="studio-panel-heading"><h3>Routines</h3><span id="routineCount" class="count">Loading…</span></div><div id="routineList" class="studio-routine-list"></div></aside><section class="chart-panel studio-routine-editor"><div class="studio-panel-heading"><div><div id="routineStatus" class="eyebrow">ROUTINE EDITOR</div><h3 id="routineEditorTitle">Select a routine</h3></div><div class="studio-actions"><button id="duplicateRoutineButton" disabled>Duplicate</button><button id="toggleRoutineButton" disabled>Disable</button><button id="saveRoutineButton" class="primary" disabled>Save</button><button id="runRoutineButton" disabled>Run on incident</button></div></div><div class="studio-routine-fields"><label>Routine name<input id="routineName" placeholder="Routine name" disabled></label><label>Description<input id="routineDescription" placeholder="What this routine investigates" disabled></label><label>Trigger rules (JSON)<textarea id="routineTrigger" rows="4" spellcheck="false" disabled></textarea></label></div><div class="studio-canvas-heading"><div><h3>Workflow</h3><p class="chart-sub">Ordered node graph · use arrows to change task order.</p></div><button id="addRoutineNodeButton" disabled>Add task</button></div><div id="routineCanvas" class="routine-canvas"><div class="empty">Choose a routine to inspect its workflow.</div></div><div id="routineEditorMessage" class="studio-message" role="status"></div></section></div>
+    </section>
+    <section id="page-agent-registry" class="page-view studio-page"><div class="page-heading"><div><h2>Agent Registry</h2><p>Inspect specialist responsibilities, instructions, memory access, model settings, and observed run statistics.</p></div></div><div class="studio-two-column"><section class="chart-panel"><div class="studio-panel-heading"><h3>Specialist agents</h3><span id="agentRegistryCount" class="count"></span></div><div id="agentRegistryList" class="registry-list"></div></section><section class="chart-panel"><div class="studio-panel-heading"><h3>Agent configuration</h3><button id="saveAgentConfig" class="primary" disabled>Save configuration</button></div><div id="agentConfigForm" class="studio-form empty">Select an agent to inspect its profile.</div></section></div></section>
+    <section id="page-micro-agent-registry" class="page-view studio-page"><div class="page-heading"><div><h2>Micro-Agent Registry</h2><p>Inspect and independently test deterministic micro-agent contracts.</p></div></div><div class="studio-two-column"><section class="chart-panel"><div class="studio-panel-heading"><h3>Micro-agents</h3><span id="microAgentCount" class="count"></span></div><div id="microAgentList" class="registry-list"></div></section><section class="chart-panel"><div class="studio-panel-heading"><h3>Micro-agent profile and test</h3><button id="invokeMicroAgent" class="primary" disabled>Run test</button></div><div id="microAgentProfile" class="studio-form empty">Select a micro-agent to inspect its schema and try a local test.</div><label class="studio-block-label">Test input JSON<textarea id="microAgentInput" rows="8" spellcheck="false">{}</textarea></label><pre id="microAgentOutput" class="studio-output">No test run yet.</pre></section></div></section>
+    <section id="page-tool-registry" class="page-view studio-page"><div class="page-heading"><div><h2>Tool Registry</h2><p>Reusable local tools with input/output contracts and explicit permission levels.</p></div></div><div class="studio-two-column"><section class="chart-panel"><div class="studio-panel-heading"><h3>Available tools</h3><span id="toolCount" class="count"></span></div><div id="toolRegistryList" class="registry-list"></div></section><section class="chart-panel"><div class="studio-panel-heading"><h3>Tool details and test</h3><button id="executeToolButton" class="primary" disabled>Execute locally</button></div><div id="toolProfile" class="studio-form empty">Select a tool to inspect its permission and data contract.</div><label class="studio-block-label">Input JSON<textarea id="toolInput" rows="7" spellcheck="false">{}</textarea></label><label id="toolConfirmRow" class="toggle-field" hidden><input id="toolConfirm" type="checkbox"> Confirm this local simulated action</label><pre id="toolOutput" class="studio-output">No tool run yet.</pre></section></div></section>
+    <section id="page-agent-memory" class="page-view studio-page"><div class="page-heading"><div><h2>Agent Memory</h2><p>Search and save local incident-working, historical, knowledge, and execution notes.</p></div></div><div class="studio-two-column"><section class="chart-panel"><h3>Save memory</h3><div class="studio-form-grid"><label>Scope<select id="memoryScope"><option value="incident_working">Incident working</option><option value="historical_incident">Historical incident</option><option value="knowledge">Knowledge</option><option value="agent_execution">Agent execution</option></select></label><label>Incident ID (optional)<input id="memoryIncidentId" placeholder="INC-…"></label></div><label class="studio-block-label">Note<textarea id="memoryContent" rows="5" placeholder="Add a reviewed local note"></textarea></label><button id="saveMemoryButton" class="primary">Save note</button></section><section class="chart-panel"><div class="studio-panel-heading"><h3>Relevant memory</h3><button id="searchMemoryButton">Search</button></div><div class="kb-actions"><input id="memoryQuery" placeholder="Search saved memory"><select id="memorySearchScope"><option value="">All scopes</option><option value="incident_working">Incident working</option><option value="historical_incident">Historical incident</option><option value="knowledge">Knowledge</option><option value="agent_execution">Agent execution</option></select></div><div id="memoryResults" class="studio-results"></div></section></div></section>
+    <section id="page-execution-monitor" class="page-view studio-page"><div class="page-heading"><div><h2>Execution Monitor</h2><p>Inspect persisted routine runs, task states, durations, retries, inputs, outputs, and evidence.</p></div><button id="refreshStudioRuns">Refresh runs</button></div><div class="studio-two-column"><section class="chart-panel"><div class="studio-panel-heading"><h3>Recent runs</h3><span id="studioRunCount" class="count"></span></div><div id="studioRunList" class="registry-list"></div></section><section class="chart-panel"><div class="studio-panel-heading"><h3>Run details</h3></div><div id="studioRunDetails" class="studio-results empty">Select a run to inspect its tasks.</div></section></div></section>
+    <section id="page-agent-evaluation" class="page-view studio-page"><div class="page-heading"><div><h2>Agent Evaluation</h2><p>Run synthetic routine-selection checks with expected outcomes; this is a local rule evaluation, not an LLM quality claim.</p></div><button id="runStudioEvaluation" class="primary">Run synthetic evaluation</button></div><section class="chart-panel"><div class="studio-panel-heading"><h3>Latest result</h3><span id="evaluationSummary" class="count">No evaluation run yet</span></div><div id="evaluationResult" class="studio-results">Run the synthetic suite to compare expected routine selection with actual selection.</div></section><section class="chart-panel"><h3>Evaluation history</h3><div id="evaluationHistory" class="registry-list"></div></section></section>
+    <section id="page-customer-intelligence" class="page-view studio-page">
+      <div class="page-heading"><div><h2>Flying Flea Customer Intelligence</h2><p>Customer reports, historical field issues, and local investigations</p></div><button id="cxRefresh">Refresh</button></div>
+      <div id="cxOverview" class="live-metrics"></div>
+      <p id="cxAIStatus" class="studio-message" role="status"></p>
+      <div class="studio-form-grid"><label>Feedback dataset<select id="cxDataset"><option value="real">Real feedback only</option><option value="synthetic">Synthetic tests only</option><option value="all">All records</option></select></label><div id="cxSentiment" class="studio-message" role="status"></div></div>
+      <section id="cxWorkbench" class="cx-workbench" aria-labelledby="cxWorkbenchTitle">
+        <div class="studio-panel-heading"><div><h3 id="cxWorkbenchTitle">Customer investigations</h3><span id="cxInvestigationCount" class="count"></span></div><button id="cxInvestigateRun" class="primary" disabled>Run investigation</button></div>
+        <div id="cxInvestigationList" class="cx-investigation-list"></div>
+        <div id="cxRunState" class="cx-run-state" role="status">Select a customer issue</div>
+        <div id="cxInvestigation" class="studio-results">No investigation selected</div>
+      </section>
+      <section class="chart-panel"><div class="studio-panel-heading"><h3>Feedback intake</h3><button id="cxDemo">Add synthetic examples</button></div>
+        <form id="cxForm"><div class="studio-form-grid"><label>Source<select id="cxSource"><option value="manual_import">Authorized manual import</option><option value="synthetic">Synthetic test</option></select></label><label>Rating<select id="cxRating"><option value="">Not supplied</option><option value="1">1 star</option><option value="2">2 stars</option><option value="3">3 stars</option><option value="4">4 stars</option><option value="5">5 stars</option></select></label></div>
+        <label class="studio-block-label">Original feedback<textarea id="cxContent" rows="3" required minlength="3" maxlength="10000"></textarea></label>
+        <label class="studio-block-label">Import feedback JSON<input id="cxImport" type="file" accept=".json,application/json"></label>
+        <div class="cx-form-submit-row"><button id="cxSubmit" class="primary" type="submit">Analyze feedback</button></div></form>
+        <p id="cxJobStatus" class="studio-message" role="status">No feedback job submitted</p>
+      </section>
+      <section class="chart-panel"><div class="studio-panel-heading"><h3>Feedback inbox</h3><div class="studio-actions"><button id="cxPrevious">Previous</button><span id="cxPage" class="count"></span><button id="cxNext">Next</button></div></div><div id="cxInbox" class="studio-results"></div></section>
+      <section class="chart-panel"><h3>Source connections</h3><div id="cxSources" class="studio-results"></div></section>
+      <section id="cxTicketSection" class="chart-panel"><h3>Local ticket approvals</h3><div class="studio-form-grid"><label>Operator credential<input id="cxOperatorCredential" type="password" autocomplete="off"></label><label>Decision note<input id="cxDecisionNote" maxlength="1000"></label></div><div id="cxApprovals" class="studio-results"></div></section>
     </section>
   </main>
+  </div>
 <script>
 const $ = id => document.getElementById(id);
 let cursor = 0, records = [], refreshBusy = false;
+let newestIncidentId = "";
+let incidentPage = 1;
+let incidentPageSize = 10;
+let logPage = 1;
+let logPageSize = 50;
+let topology = {nodes:[],edges:[]};
+let selectedGraphService = "";
+let topologyIncidentId = "";
+let graphZoom = 1;
+let activeIncident = null;
+let trendSamples = [];
+let latestIncidents = [];
+let studioRoutines = [];
+let studioRoutineDraft = null;
+let studioAgents = [];
+let studioMicroAgents = [];
+let studioTools = [];
+let studioSelectedAgent = null;
+let studioSelectedMicroAgent = null;
+let studioSelectedTool = null;
+let studioSelectedRun = null;
+const studioLoadedPages = new Set();
 const serviceNames = new Set();
+const graphPositions = {
+  "api-gateway": {x:110,y:185},
+  "authentication-service": {x:285,y:65},
+  "vehicle-telemetry-api": {x:300,y:185},
+  "order-management-service": {x:300,y:325},
+  "postgresql": {x:520,y:120},
+  "redis": {x:520,y:235},
+  "kafka": {x:700,y:275},
+  "notification-service": {x:865,y:275}
+};
+const mobileGraphPositions = {
+  "api-gateway": {x:180,y:60},
+  "authentication-service": {x:65,y:165},
+  "vehicle-telemetry-api": {x:180,y:165},
+  "order-management-service": {x:295,y:165},
+  "postgresql": {x:65,y:285},
+  "redis": {x:180,y:285},
+  "kafka": {x:295,y:285},
+  "notification-service": {x:295,y:415}
+};
+const mobileGraphLabels = {
+  "api-gateway":"API gateway",
+  "authentication-service":"Auth service",
+  "vehicle-telemetry-api":"Telemetry API",
+  "order-management-service":"Orders",
+  "postgresql":"PostgreSQL",
+  "redis":"Redis cache",
+  "kafka":"Kafka",
+  "notification-service":"Notify"
+};
+const graphLabels = {
+  "api-gateway":"API gateway",
+  "authentication-service":"Authentication",
+  "vehicle-telemetry-api":"Vehicle telemetry API",
+  "order-management-service":"Order management",
+  "postgresql":"PostgreSQL",
+  "redis":"Redis cache",
+  "kafka":"Kafka",
+  "notification-service":"Notifications"
+};
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 }
@@ -159,20 +569,681 @@ async function api(path, options = {}) {
   if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
   return body;
 }
+let actionToastTimer;
+function showActionToast(title, message, tone="info", duration=5000) {
+  const toast = $("actionToast");
+  $("actionToastTitle").textContent = title;
+  $("actionToastMessage").textContent = message;
+  toast.dataset.tone = tone;
+  toast.classList.add("visible");
+  toast.setAttribute("aria-hidden", "false");
+  toast.setAttribute("role", tone === "error" ? "alert" : "status");
+  toast.setAttribute("aria-live", tone === "error" ? "assertive" : "polite");
+  clearTimeout(actionToastTimer);
+  if (duration > 0) actionToastTimer = setTimeout(dismissActionToast, duration);
+}
+function dismissActionToast() {
+  clearTimeout(actionToastTimer);
+  $("actionToast").classList.remove("visible");
+  $("actionToast").setAttribute("aria-hidden", "true");
+}
+$("dismissActionToast").onclick = dismissActionToast;
 function setError(message="") { $("errorMessage").textContent = message; }
 function setKbError(message="") { $("kbError").textContent = message; }
 function setMonitorError(message="") { $("monitorError").textContent = message; }
 function showKbResult(elementId, value) {
   $(elementId).textContent = JSON.stringify(value, null, 2);
 }
+function showPage(pageName) {
+  if (pageName === "customer-intelligence") loadCustomerIntelligence().catch(error => showActionToast("Customer Intelligence unavailable", error.message, "error"));
+  document.querySelectorAll(".page-view").forEach(page => {
+    page.classList.toggle("active", page.id === `page-${pageName}`);
+  });
+  document.querySelectorAll(".nav-button").forEach(button => {
+    button.classList.toggle("active", button.dataset.page === pageName);
+  });
+  if (pageName === "topology") {
+    $("topologyIncidentSelect").value = $("incidentSelect").value;
+    renderTopology(activeIncident);
+  }
+  document.querySelectorAll(".activity-page > .secondary-panel").forEach(panel => {
+    panel.open = pageName === "activity";
+  });
+  if (pageName.includes("studio") || ["agent-registry","micro-agent-registry","tool-registry","agent-memory","execution-monitor","agent-evaluation"].includes(pageName)) {
+    loadStudioPage(pageName).catch(error => showActionToast("Studio page failed to load",error.message,"error",8000));
+  }
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+let cxOffset = 0;
+let cxJob = null;
+let cxPollTimer = null;
+let cxLoading = false;
+let cxSelectedIncident = null;
+let cxSelectedStage = "collect";
+let cxRunPollTimer = null;
+let cxRunPending = false;
+let cxCurrentIncident = null;
+let cxCurrentRun = null;
+
+async function loadCustomerIntelligence() {
+  if (cxLoading) return;
+  cxLoading = true;
+  try {
+  const ai = await api("/api/customer-intelligence/ai");
+  $("cxAIStatus").textContent = ai.configured ? `Hugging Face AI configured · ${ai.model} · Hosted processing` : ai.enabled ? "Hugging Face AI enabled but not configured · fallback results require review" : "AI disabled · current analysis uses the documented deterministic fallback";
+  const dataset = $("cxDataset").value;
+  const [overview, feedback, sources, approvals, investigations] = await Promise.all([
+    api(`/api/customer-intelligence/overview?dataset=${dataset}`), api(`/api/feedback?limit=10&offset=${cxOffset}&dataset=${dataset}`),
+    api("/api/feedback/sources"), api("/api/customer-intelligence/approvals"), api(`/api/customer-intelligence/investigations?dataset=${dataset}`)
+  ]);
+  approvals.items = approvals.items.filter(item => dataset === "all" || (item.approved_snapshot.alert?.customer_feedback?.source === "synthetic") === (dataset === "synthetic"));
+  $("cxOverview").innerHTML = [[overview.total_feedback,"Feedback records"],[overview.sentiment_counts?.positive || 0,"Positive reviews"],[investigations.items.length,"Investigations"],[overview.live_sources,"Live sources"]].map(([value,label]) => label === "Investigations" ? `<button id="cxOpenInvestigations" title="Open customer investigations"><strong>${Number(value)}</strong><span>${label} &gt;</span></button>` : `<div><strong>${Number(value)}</strong><span>${label}</span></div>`).join("");
+  $("cxOpenInvestigations").onclick = () => $("cxWorkbench").scrollIntoView({behavior:"smooth",block:"start"});
+  renderCustomerInvestigationList(investigations.items);
+  $("cxSentiment").textContent = `${Object.entries(overview.sentiment_counts || {}).map(([label,count]) => `${label}: ${count}`).join(" · ") || "No analyzed feedback"} · Average rating: ${overview.average_rating ?? "not available"}`;
+  $("cxPage").textContent = `${feedback.total ? cxOffset + 1 : 0}-${Math.min(cxOffset + 10,feedback.total)} of ${feedback.total}`;
+  $("cxPrevious").disabled = cxOffset === 0;
+  $("cxNext").disabled = cxOffset + 10 >= feedback.total;
+  $("cxInbox").innerHTML = feedback.items.length ? feedback.items.map(item => `<article class="studio-result-row"><strong>${escapeHtml(item.source)} · ${escapeHtml(item.analysis?.sentiment || "pending")} · ${escapeHtml(item.analysis?.topic || "unclassified")}</strong><p>${escapeHtml(item.original_content)}</p><small>${escapeHtml(item.analysis?.analysis_status || "pending")} · ${escapeHtml(item.analysis?.model_version || "not analyzed")} · ${escapeHtml(item.published_date_display || item.created_at || item.collected_at)}${item.rating ? ` · ${Number(item.rating)} / 5` : ""}${item.experience_type ? ` · ${escapeHtml(item.experience_type.replaceAll("_"," "))}` : ""}</small>${item.quality_note ? `<p class="muted">${escapeHtml(item.quality_note)}</p>` : ""}${["google_play","app_store","bikewale","bikedekho","zigwheels"].includes(item.source) && item.source_url ? `<a href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener noreferrer">Original source / review</a>` : ""}${item.incident_id ? `<div><button data-cx-incident="${escapeHtml(item.incident_id)}">Open investigation</button></div>` : ""}${item.customer_response ? `<section class="cx-evidence"><strong>AG-02 answer · ${escapeHtml(item.customer_response.response.status)}</strong><p>${escapeHtml(item.customer_response.response.summary)}</p>${(item.customer_response.response.steps || []).map(step => `<p>${escapeHtml(step.text)} ${(step.evidence || []).map(citation => `<small>${escapeHtml(citation.source || "Source")}${citation.page ? ` · page ${Number(citation.page)}` : ""}</small>`).join(" ")}</p>`).join("")}${(item.customer_response.response.evidence || []).map(evidence => `<p>${escapeHtml(evidence.text)}<br><small>${escapeHtml(evidence.citation?.source || "Unknown source")}${evidence.citation?.page ? ` · page ${Number(evidence.citation.page)}` : ""}</small></p>`).join("")}${item.customer_response.satisfied === null ? `<div class="studio-actions"><button data-cx-satisfaction="yes" data-feedback-id="${escapeHtml(item.internal_id)}">Satisfied</button><button data-cx-satisfaction="no" data-feedback-id="${escapeHtml(item.internal_id)}">Not satisfied</button></div><label class="studio-block-label" data-cx-followup-label="${escapeHtml(item.internal_id)}" hidden>What remains unresolved?<textarea data-cx-followup="${escapeHtml(item.internal_id)}" rows="2" maxlength="5000"></textarea></label>` : `<small>Customer status: ${item.customer_response.satisfied ? "resolved" : "follow-up submitted"}</small>`}</section>` : ""}</article>`).join("") : '<div class="empty">No feedback in this dataset.</div>';
+  $("cxSources").innerHTML = sources.items.map(item => `<div class="studio-profile-row"><span>${escapeHtml(item.source)}</span><span>${escapeHtml(item.status)} · ${Number(item.stored_reviews || 0)} stored reviews${item.app_id ? ` · ${escapeHtml(item.app_id)}` : ""}</span></div>`).join("");
+  $("cxApprovals").innerHTML = approvals.items.length ? approvals.items.map(item => `<article class="studio-result-row"><strong>${escapeHtml(item.approval_id)} · ${escapeHtml(item.status)}</strong><p>${escapeHtml(item.approved_snapshot.summary)}</p><details class="studio-run-task"><summary>Proposal and linked evidence</summary><pre>${escapeHtml(JSON.stringify({recommendation:item.approved_snapshot.poc.resolution,evidence:item.approved_snapshot.poc.rca.hypotheses,ticket:item.ticket,approver:item.approver,decided_at:item.decided_at,note:item.note},null,2))}</pre></details>${item.status === "PENDING_APPROVAL" ? `<div class="studio-actions"><button data-cx-approve="${escapeHtml(item.approval_id)}">Approve local ticket</button><button data-cx-reject="${escapeHtml(item.approval_id)}">Reject</button></div>` : ""}</article>`).join("") : '<div class="empty">No ticket proposals awaiting review.</div>';
+  $("cxInbox").querySelectorAll("[data-cx-incident]").forEach(button => button.onclick = () => showCustomerInvestigation(button.dataset.cxIncident).catch(error => showActionToast("Investigation unavailable",error.message,"error")));
+  $("cxInbox").querySelectorAll('[data-cx-satisfaction="yes"]').forEach(button => button.onclick = () => submitCustomerSatisfaction(button.dataset.feedbackId,true));
+  $("cxInbox").querySelectorAll('[data-cx-satisfaction="no"]').forEach(button => button.onclick = () => {
+    const label = $("cxInbox").querySelector(`[data-cx-followup-label="${CSS.escape(button.dataset.feedbackId)}"]`);
+    label.hidden = false;
+    const submit = document.createElement("button");
+    submit.textContent = "Submit follow-up";
+    submit.onclick = () => submitCustomerSatisfaction(button.dataset.feedbackId,false,label.querySelector("textarea").value);
+    label.appendChild(submit);
+    button.disabled = true;
+  });
+  feedback.items.filter(item => !item.incident_id).forEach(item => {
+    const article = [...$("cxInbox").children][feedback.items.indexOf(item)];
+    const button = document.createElement("button");
+    button.textContent = "Reanalyze feedback";
+    button.dataset.cxReanalyze = item.internal_id;
+    button.onclick = () => submitCustomerJob(`/api/feedback/${encodeURIComponent(item.internal_id)}/reanalyze`);
+    article.appendChild(button);
+  });
+  $("cxApprovals").querySelectorAll("[data-cx-approve],[data-cx-reject]").forEach(button => button.onclick = () => decideCustomerTicket(button.dataset.cxApprove || button.dataset.cxReject,button.dataset.cxApprove ? "approve" : "reject"));
+  if (!cxSelectedIncident && investigations.items.length) cxSelectedIncident = investigations.items[0].incident_id;
+  if (cxSelectedIncident && investigations.items.some(item => item.incident_id === cxSelectedIncident)) await showCustomerInvestigation(cxSelectedIncident,false);
+  else {cxSelectedIncident = null;$("cxInvestigation").textContent = "No investigation in this dataset";$("cxInvestigateRun").disabled = true;}
+  } finally { cxLoading = false; }
+}
+
+async function submitCustomerSatisfaction(feedbackId,resolved,followup="") {
+  try {
+    const result = await api(`/api/customer-intelligence/feedback/${encodeURIComponent(feedbackId)}/satisfaction`,{method:"POST",body:JSON.stringify({resolved,followup})});
+    if(result.job_id) {cxJob=result.job_id;$("cxJobStatus").textContent=`${cxJob}: queued`;pollCustomerJob();}
+    await loadCustomerIntelligence();
+    showActionToast(resolved ? "Marked resolved" : "Follow-up queued",resolved ? "Customer confirmation saved." : "Additional details entered the Customer Intelligence pipeline.","success");
+  } catch(error) { showActionToast("Response not saved",error.message,"error"); }
+}
+
+function renderCustomerInvestigationList(items) {
+  $("cxInvestigationCount").textContent = `${items.length} customer issues`;
+  $("cxInvestigationList").innerHTML = items.length ? items.map(item => `<div class="cx-issue-row"><button class="cx-issue" data-cx-issue="${escapeHtml(item.incident_id)}" aria-pressed="${item.incident_id === cxSelectedIncident}" title="${escapeHtml(item.summary)}"><small>${escapeHtml(item.incident_id)} · ${escapeHtml(item.service)} · ${item.evidence?.customer_feedback?.length || 1} linked review(s)</small><strong>${escapeHtml(item.summary)}</strong><small>${escapeHtml((item.poc?.routine_execution?.status || "not run").replaceAll("_"," "))}</small></button><button class="cx-issue-remove" data-cx-remove="${escapeHtml(item.incident_id)}" aria-label="Remove ${escapeHtml(item.incident_id)} from customer investigations" title="Remove from investigations">×</button></div>`).join("") : '<div class="empty">No customer issues in this dataset.</div>';
+  $("cxInvestigationList").querySelectorAll("[data-cx-issue]").forEach(button => button.onclick = () => showCustomerInvestigation(button.dataset.cxIssue).catch(error => showActionToast("Investigation unavailable",error.message,"error")));
+  $("cxInvestigationList").querySelectorAll("[data-cx-remove]").forEach(button => button.onclick = () => removeCustomerInvestigation(button.dataset.cxRemove));
+}
+
+async function removeCustomerInvestigation(identifier) {
+  if (!window.confirm(`Permanently delete ${identifier}, its linked feedback, run history, and local ticket proposal history? This cannot be undone.`)) return;
+  try {
+    await api(`/api/customer-intelligence/investigations/${encodeURIComponent(identifier)}`,{method:"DELETE"});
+    if (cxSelectedIncident === identifier) cxSelectedIncident = null;
+    await loadCustomerIntelligence();
+    showActionToast("Investigation deleted","The investigation and its linked local records were permanently deleted.","success");
+  } catch(error) { showActionToast("Investigation not removed",error.message,"error"); }
+}
+
+const cxStages = [
+  {id:"monitor",agent:"AG-08",name:"Monitoring",description:"Detect the reported symptom",micro:"MA-15 feedback analysis / MA-14 alert detection"},
+  {id:"collect",agent:"AG-02",name:"Knowledge",description:"Retrieve manuals and issue history",micro:"MA-03 ingestion / MA-04 retrieval / MA-07 governance"},
+  {id:"correlate",agent:"AG-16",name:"Correlation",description:"Check synthetic operational context",micro:"MA-17 timeline / MA-18 dependencies / MA-19 patterns"},
+  {id:"hypothesis",agent:"AG-20",name:"RCA",description:"Validate possible explanations",micro:"MA-21 hypotheses / MA-22 evidence validation"},
+  {id:"response",agent:"AG-23",name:"Resolution",description:"Recommend a safe next step",micro:"MA-24 response planning / MA-25 safety gate"},
+  {id:"preview",agent:"AG-27",name:"Ticket review",description:"Prepare handoff; wait for approval",micro:"MA-28 ticket enrichment / MA-29 lifecycle"}
+];
+
+function renderCustomerGuidance(item) {
+  const steps = item.text.split(/\s+(?=\d+[.)]\s)/).map(text => text.replace(/^\d+[.)]\s*/,""));
+  const sourceLabel = item.source_kind === "manual_or_sop" ? "Uploaded manual / SOP: confirm applicability" : item.review_required ? "Historical guidance: confirm applicability with support" : "Reviewed guidance";
+  return `<article class="cx-evidence">${steps.length > 1 ? `<ol>${steps.map(step => `<li>${escapeHtml(step)}</li>`).join("")}</ol>` : `<p>${escapeHtml(item.text)}</p>`}<small>Source: ${escapeHtml(item.citation?.source || "Unknown")}${item.citation?.row ? ` · Row ${Number(item.citation.row)}` : ""} · ${sourceLabel}</small><p>${escapeHtml(item.applicability || "")}</p></article>`;
+}
+
+async function showCustomerInvestigation(identifier,scroll=true) {
+  cxSelectedIncident = identifier;
+  const detail = await api(`/api/customer-intelligence/investigations/${encodeURIComponent(identifier)}`);
+  const incident = detail.incident;
+  const execution = incident.poc?.routine_execution;
+  const run = detail.run;
+  cxCurrentIncident = incident;
+  cxCurrentRun = run;
+  renderCustomerPipeline(incident,run);
+  document.querySelectorAll("[data-cx-issue]").forEach(button => button.setAttribute("aria-pressed",String(button.dataset.cxIssue === identifier)));
+  if (scroll) $("cxWorkbench").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function renderCustomerPipeline(incident,run) {
+  const execution = incident.poc?.routine_execution;
+  const actions = incident.poc?.resolution?.actions || [];
+  const hypotheses = incident.poc?.rca?.hypotheses || [];
+  const tasks = run?.tasks || [];
+  const ticketDecision = incident.poc?.customer_ticket_decision;
+  $("cxInvestigateRun").disabled = cxRunPending || !!ticketDecision || !!incident.poc?.ticket;
+  $("cxRunState").innerHTML = `<strong>${escapeHtml(cxRunPending ? "Investigation running" : (run?.status || "No recorded run").replaceAll("_"," "))}</strong><span>${escapeHtml(execution?.routine_name || "Customer investigation")} · ${escapeHtml(incident.incident_id)}</span><span>${run?.duration_ms != null ? `${Number(run.duration_ms)} ms` : ""}</span>`;
+  $("cxInvestigation").innerHTML = `<div class="cx-flow" aria-label="Investigation agent pipeline">${cxStages.map(stage => {
+    const task = tasks.find(item => item.node_id === stage.id);
+    const approval = tasks.find(item => item.node_id === "approval");
+    const state = stage.id === "orchestrate" ? (run ? "completed" : "not_run") : stage.id === "preview" && approval ? approval.status : task?.status || (cxRunPending ? "queued" : "not_run");
+    return `<button class="cx-stage" data-cx-stage="${stage.id}" data-state="${state}" aria-pressed="${cxSelectedStage === stage.id}"><span class="cx-stage-status">${escapeHtml(state.replaceAll("_"," "))}</span><strong>${stage.agent}<br>${stage.name}</strong><small>${stage.description}</small><small>${task ? `${Number(task.duration_ms || 0)} ms` : stage.id === "orchestrate" ? "Routine selected" : "No recorded task"}</small></button>`;
+  }).join("")}</div><div id="cxAgentDetail" class="cx-agent-detail"></div>
+  <div class="cx-detail-layout">
+  <section class="cx-detail-section cx-answer"><h4>Answer from your knowledge base</h4>${actions.map(action => `<h4>${escapeHtml(action.title)}</h4><p>${escapeHtml(action.description)}</p>${(action.knowledge_guidance || []).map(renderCustomerGuidance).join("")}<p><strong>How to confirm it worked</strong><br>${escapeHtml(action.verification)}</p>`).join("") || '<p>No documented answer is stored. Run the investigation to search your uploaded knowledge.</p>'}
+  <label class="toggle-field"><input id="cxNeedsSupport" type="checkbox"> The guidance does not resolve this issue, or I need support</label>
+  <button id="cxRaiseTicket" class="primary">${incident.poc?.ticket ? "View local ticket" : "Raise a ticket request"}</button><h4>Did this resolve your issue?</h4><div class="studio-actions"><button id="cxInvestigationSatisfied">Satisfied</button><button id="cxInvestigationUnsatisfied">Not satisfied</button></div><label id="cxInvestigationFollowupLabel" class="studio-block-label" hidden>What remains unresolved?<textarea id="cxInvestigationFollowup" rows="2" maxlength="5000"></textarea></label><button id="cxSubmitInvestigationFollowup" hidden>Submit follow-up</button></section>
+  <div class="cx-supporting"><section class="cx-detail-section"><h4>Possible explanations</h4>${hypotheses.map(item => `<p><strong>${escapeHtml(item.title)}</strong><br>${escapeHtml(item.rationale)}</p><small>${(item.valid_evidence_refs || item.evidence_refs || []).length} retained evidence reference(s) · Cause unconfirmed</small>`).join("") || '<p>No validated hypothesis is stored.</p>'}</section>
+  <section class="cx-detail-section"><h4>Operational correlation</h4><p>${escapeHtml(incident.evidence?.correlation?.customer_evidence_note || "Only synthetic telemetry is available. A missing match does not invalidate the customer report.")}</p></section></div></div>`;
+  $("cxInvestigation").querySelectorAll("[data-cx-stage]").forEach(button => button.onclick = () => {cxSelectedStage = button.dataset.cxStage;renderCustomerPipeline(cxCurrentIncident,cxCurrentRun);});
+  const hasGuidance = actions.some(action => action.knowledge_guidance?.length);
+  $("cxRaiseTicket").disabled = hasGuidance && !incident.poc?.ticket;
+  $("cxNeedsSupport").onchange = () => {$("cxRaiseTicket").disabled = hasGuidance && !$("cxNeedsSupport").checked && !incident.poc?.ticket;};
+  $("cxRaiseTicket").onclick = () => {$("cxTicketSection").scrollIntoView({behavior:"smooth",block:"start"});$("cxDecisionNote").value = `Review ${incident.incident_id}: ${hasGuidance ? "documented guidance did not resolve the issue or support was requested" : "no matching documented answer; support investigation required"}`;};
+  $("cxInvestigationSatisfied").onclick = () => submitInvestigationSatisfaction(incident.incident_id,true);
+  $("cxInvestigationUnsatisfied").onclick = () => {$("cxInvestigationFollowupLabel").hidden=false;$("cxSubmitInvestigationFollowup").hidden=false;};
+  $("cxSubmitInvestigationFollowup").onclick = () => submitInvestigationSatisfaction(incident.incident_id,false,$("cxInvestigationFollowup").value);
+  renderCustomerAgentDetail(incident,run);
+  if (incident.poc?.resolution?.ai_status) {
+    const notice = document.createElement("p");
+    notice.className = "studio-message";
+    notice.textContent = `AI answer: ${incident.poc.resolution.ai_status}${incident.poc.resolution.ai_error ? ` · ${incident.poc.resolution.ai_error}` : ` · ${incident.poc.resolution.model || ""}`}`;
+    $("cxInvestigation").querySelector(".cx-answer").prepend(notice);
+  }
+}
+
+function renderCustomerAgentDetail(incident,run) {
+  const stage = cxStages.find(item => item.id === cxSelectedStage) || cxStages[2];
+  const task = run?.tasks?.find(item => item.node_id === stage.id);
+  let summary = stage.description;
+  if (stage.id === "monitor") summary = `Customer signal: ${incident.alert?.customer_feedback?.analysis?.sentiment || "unknown"} sentiment, ${incident.alert?.customer_feedback?.analysis?.topic || "unknown"} topic. Analysis requires review.`;
+  if (stage.id === "orchestrate") summary = incident.poc?.routine_execution?.selected_reason || "No routine-selection record";
+  if (stage.id === "collect") summary = `${incident.evidence?.sops?.evidence?.length || 0} knowledge passages, ${incident.evidence?.trace_events?.length || 0} trace events, ${incident.evidence?.logs?.items?.length || 0} log matches retrieved.`;
+  if (stage.id === "correlate") summary = "Compared service/time associations and dependency patterns. Synthetic context is not causal proof.";
+  if (stage.id === "hypothesis") summary = `${incident.poc?.rca?.hypotheses?.length || 0} possible explanation(s), checked against retained evidence. Root cause remains unconfirmed.`;
+  if (stage.id === "response") summary = incident.poc?.resolution?.actions?.[0]?.description || "No recommendation available";
+  if (stage.id === "preview") summary = incident.poc?.ticket ? "An operator-approved local ticket is stored." : "A proposal is prepared for human review. No ticket or infrastructure action is created automatically.";
+  const passages = incident.evidence?.sops?.evidence || [];
+  const guidance = incident.poc?.resolution?.actions?.[0]?.knowledge_guidance || [];
+  const findings = {
+    monitor: [`Read ${incident.evidence?.customer_feedback?.length || 1} customer report(s).`, `Identified ${incident.alert?.customer_feedback?.analysis?.topic?.replaceAll("_"," ") || "an unclassified concern"} and passed the issue to investigation.`],
+    collect: passages.length ? passages.map(item => `Found ${item.citation?.source || item.metadata?.source_path || "a knowledge source"}${item.citation?.row ? `, row ${item.citation.row}` : ""}. ${item.review_required !== false ? "Needs applicability review." : "Reviewed source."}`) : ["No matching source was retrieved from the uploaded knowledge."],
+    correlate: [`Checked ${incident.evidence?.correlation?.evidence_event_count || 0} retained synthetic events for related timing and dependencies.`, "No real vehicle or production system was contacted. Missing operational evidence does not disprove the complaint."],
+    hypothesis: (incident.poc?.rca?.hypotheses || []).map(item => `${item.title}: ${item.rationale}`),
+    response: guidance.length ? guidance.map(item => `Selected documented guidance from ${item.citation?.source || "the knowledge base"}. ${item.text}`) : ["No matching documented resolution was selected. A support ticket can be requested rather than inventing a repair."],
+    preview: [incident.poc?.ticket ? "An authorized operator approved a local ticket." : "Prepared the customer report and investigation evidence for support. No ticket has been created.", "A ticket request still requires an authorized operator decision."]
+  };
+  $("cxAgentDetail").innerHTML = `<div class="studio-panel-heading"><h3>${stage.agent} · ${stage.name}</h3><span class="count">${escapeHtml((task?.status || "not run").replaceAll("_"," "))} · ${Number(task?.duration_ms || 0)} ms</span></div><p><strong>What this agent did</strong><br>${escapeHtml(summary)}</p><ul>${(findings[stage.id] || []).map(text => `<li>${escapeHtml(text)}</li>`).join("")}</ul><small>${stage.micro} · ${Number(task?.attempt || 1)} attempt(s)</small>${task?.error_text ? `<p class="error-message">This step failed: ${escapeHtml(task.error_text)}</p>` : ""}`;
+}
+
+$("cxInvestigateRun").onclick = async () => {
+  if (!cxSelectedIncident || cxRunPending) return;
+  const identifier = cxSelectedIncident;
+  const previous = cxCurrentRun?.run_id;
+  cxRunPending = true;
+  renderCustomerPipeline(cxCurrentIncident,cxCurrentRun);
+  try {
+    await api(`/api/customer-intelligence/investigations/${encodeURIComponent(identifier)}/run`,{method:"POST"});
+    let remaining = 120;
+    const check = async () => {
+      if (cxSelectedIncident !== identifier) {cxRunPending = false;return;}
+      try {
+        await showCustomerInvestigation(identifier,false);
+        if (cxCurrentRun?.run_id !== previous && !["running","queued"].includes(cxCurrentRun?.status)) {
+          cxRunPending = false;renderCustomerPipeline(cxCurrentIncident,cxCurrentRun);await loadCustomerIntelligence();return;
+        }
+        if (--remaining <= 0) throw new Error("Investigation is taking longer than expected. Refresh to check the stored result.");
+        cxRunPollTimer = setTimeout(check,1000);
+      } catch(error) {cxRunPending = false;renderCustomerPipeline(cxCurrentIncident,cxCurrentRun);showActionToast("Investigation status",error.message,"error");}
+    };
+    cxRunPollTimer = setTimeout(check,500);
+  } catch(error) {cxRunPending = false;renderCustomerPipeline(cxCurrentIncident,cxCurrentRun);showActionToast("Investigation could not start",error.message,"error");}
+};
+
+async function submitCustomerJob(path, body) {
+  $("cxSubmit").disabled = true;
+  try {
+    const result = await api(path,{method:"POST",headers:{"Content-Type":"application/json"},...(body ? {body:JSON.stringify(body)} : {})});
+    cxJob = result.job_id;
+    cxSelectedIncident = null;
+    $("cxJobStatus").textContent = `${cxJob}: queued`;
+    clearTimeout(cxPollTimer);
+    await pollCustomerJob();
+  } catch(error) {
+    $("cxJobStatus").textContent = `Submission failed: ${error.message}`;
+    showActionToast("Feedback intake failed",error.message,"error");
+  } finally { $("cxSubmit").disabled = false; }
+}
+
+async function pollCustomerJob() {
+  if (!cxJob) return;
+  try {
+    const job = await api(`/api/customer-intelligence/jobs/${encodeURIComponent(cxJob)}`);
+    $("cxJobStatus").textContent = `${cxJob}: ${job.status}${job.error ? ` · ${job.error}` : ""}`;
+    if (["queued","running"].includes(job.status)) {
+      cxPollTimer = setTimeout(pollCustomerJob,1500);
+      return;
+    }
+    else {
+      const completedJob = job;
+      cxJob = null;
+      cxOffset = 0;
+      await loadCustomerIntelligence();
+      const processedRecord = completedJob.result?.records?.[0];
+      const completedFeedbackId = processedRecord?.feedback_id;
+      const recentFeedback = await api(`/api/feedback?limit=100&offset=0&dataset=${$("cxDataset").value}`);
+      const completedFeedback = recentFeedback.items?.find(item => item.internal_id === completedFeedbackId);
+      const createdIncident = processedRecord?.incident_id || completedFeedback?.incident_id;
+      cxSelectedIncident = createdIncident || null;
+      if (createdIncident) await showCustomerInvestigation(createdIncident);
+      else {
+        const analysis = processedRecord?.analysis || completedFeedback?.analysis;
+        if (completedJob.status === "failed") {
+          showActionToast("Feedback processing failed",completedJob.error || "Review the feedback job status and try again.","error");
+        } else if (analysis && !analysis.requires_investigation) {
+          const reason = analysis.sentiment === "positive" ? "Positive feedback stays in the inbox." : "No actionable issue or support question was detected.";
+          $("cxJobStatus").textContent = `${cxJob}: saved to feedback inbox · ${reason}`;
+          showActionToast("Feedback saved",reason,"success");
+        } else if (completedJob.status === "completed") {
+          showActionToast("Feedback saved","No investigation was returned. Refresh or reanalyze it from the feedback inbox.","warning");
+        }
+        const answer = completedJob.result?.records?.find(item => item.customer_response)?.customer_response;
+        if (answer) showActionToast("Customer answer ready",answer.summary,"success");
+      }
+    }
+  } catch(error) {
+    $("cxJobStatus").textContent = `Status check failed: ${error.message}`;
+    cxPollTimer = setTimeout(pollCustomerJob,3000);
+  }
+}
+
+async function submitInvestigationSatisfaction(incidentId,resolved,followup="") {
+  try {
+    const result = await api(`/api/customer-intelligence/investigations/${encodeURIComponent(incidentId)}/satisfaction`,{method:"POST",body:JSON.stringify({resolved,followup})});
+    if(result.job_id) {cxJob=result.job_id;$("cxJobStatus").textContent=`${cxJob}: queued`;pollCustomerJob();}
+    await loadCustomerIntelligence();
+    showActionToast(resolved ? "Marked resolved" : "Follow-up queued",resolved ? "Customer confirmation saved." : "Additional details entered the Customer Intelligence pipeline.","success");
+  } catch(error) { showActionToast("Response not saved",error.message,"error"); }
+}
+
+async function decideCustomerTicket(identifier, decision) {
+  const credential = $("cxOperatorCredential").value;
+  $("cxOperatorCredential").value = "";
+  try {
+    await api(`/api/customer-intelligence/approvals/${encodeURIComponent(identifier)}/${decision}`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${credential}`},body:JSON.stringify({note:$("cxDecisionNote").value})});
+    await loadCustomerIntelligence();
+    showActionToast("Decision recorded",decision === "approve" ? "Approved local ticket created; no external system contacted." : "Proposal rejected.");
+  } catch(error) { showActionToast("Decision not recorded",error.message,"error"); }
+}
+
+$("cxForm").onsubmit = event => {
+  event.preventDefault();
+  submitCustomerJob("/api/feedback/import",{records:[{source:$("cxSource").value,external_id:crypto.randomUUID(),original_content:$("cxContent").value,rating:$("cxRating").value ? Number($("cxRating").value) : null}]});
+};
+$("cxDemo").onclick = () => submitCustomerJob("/api/customer-intelligence/demo");
+$("cxRefresh").onclick = () => loadCustomerIntelligence().catch(error => showActionToast("Refresh failed",error.message,"error"));
+$("cxPrevious").onclick = () => {cxOffset = Math.max(0,cxOffset-10); $("cxRefresh").click();};
+$("cxNext").onclick = () => {cxOffset += 10; $("cxRefresh").click();};
+$("cxDataset").onchange = () => {cxOffset = 0; $("cxRefresh").click();};
+$("cxImport").onchange = async event => {
+  try {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 2000000) throw new Error("Import exceeds 2 MB");
+    const value = JSON.parse(await file.text());
+    await submitCustomerJob("/api/feedback/import",Array.isArray(value) ? {records:value} : value);
+  } catch(error) { showActionToast("Import failed",error.message,"error"); }
+  event.target.value = "";
+};
+
+document.querySelectorAll(".nav-button").forEach(button => {
+  button.addEventListener("click", () => showPage(button.dataset.page));
+});
+document.querySelectorAll("[data-open-page]").forEach(button => {
+  button.addEventListener("click", () => showPage(button.dataset.openPage));
+});
+async function loadStudioPage(pageName) {
+  if (pageName === "routine-studio") await loadStudioRoutines();
+  if (pageName === "agent-registry") await loadStudioAgents();
+  if (pageName === "micro-agent-registry") await loadStudioMicroAgents();
+  if (pageName === "tool-registry") await loadStudioTools();
+  if (pageName === "agent-memory") await loadStudioMemory();
+  if (pageName === "execution-monitor") await loadStudioRuns();
+  if (pageName === "agent-evaluation") await loadStudioEvaluations();
+}
+async function loadStudioRoutines(keepId) {
+  const result=await api("/api/studio/routines");
+  studioRoutines=result.items||[];
+  $("routineCount").textContent=`${studioRoutines.length} saved`;
+  $("routineList").innerHTML=studioRoutines.map(routine=>`<button class="studio-list-item ${routine.routine_id===(keepId||studioRoutineDraft?.routine_id)?"selected":""}" data-routine-id="${escapeHtml(routine.routine_id)}"><strong>${escapeHtml(routine.name)}</strong><small>${routine.enabled?"Enabled":"Disabled"} · ${routine.nodes.length} nodes</small></button>`).join("")||'<div class="empty">No routines saved.</div>';
+  $("routineList").querySelectorAll("[data-routine-id]").forEach(button=>button.onclick=()=>selectStudioRoutine(button.dataset.routineId));
+  const selected=keepId||studioRoutineDraft?.routine_id||studioRoutines[0]?.routine_id;
+  if(selected) await selectStudioRoutine(selected,false);
+}
+async function selectStudioRoutine(routineId,refreshList=true) {
+  const routine=await api(`/api/studio/routines`);
+  studioRoutineDraft=structuredClone(routine.items.find(item=>item.routine_id===routineId));
+  if(!studioRoutineDraft)return;
+  $("routineEditorTitle").textContent=studioRoutineDraft.name;
+  $("routineName").disabled=false;$("routineDescription").disabled=false;$("routineTrigger").disabled=false;
+  $("routineName").value=studioRoutineDraft.name;
+  $("routineDescription").value=studioRoutineDraft.description||"";
+  $("routineTrigger").value=JSON.stringify(studioRoutineDraft.trigger||{},null,2);
+  $("routineStatus").textContent=studioRoutineDraft.enabled?"ENABLED ROUTINE":"DISABLED ROUTINE";
+  ["duplicateRoutineButton","toggleRoutineButton","saveRoutineButton","runRoutineButton","addRoutineNodeButton"].forEach(id=>$(id).disabled=false);
+  $("toggleRoutineButton").textContent=studioRoutineDraft.enabled?"Disable":"Enable";
+  renderRoutineNodes();
+  if(refreshList) await loadStudioRoutines(routineId);
+}
+function renderRoutineNodes() {
+  if(!studioRoutineDraft)return;
+  const nodes=studioRoutineDraft.nodes||[];
+  const types=["agent","micro_agent","tool","decision","approval"];
+  $("routineCanvas").innerHTML=nodes.length?nodes.map((node,index)=>`<article class="routine-node" data-node-type="${escapeHtml(node.type)}" data-node-index="${index}"><div class="routine-node-head"><div class="routine-node-title"><strong>${String(index+1).padStart(2,"0")}</strong><span>${escapeHtml((node.type||"task").replaceAll("_"," ").toUpperCase())}</span></div><div class="node-order-actions"><button type="button" data-node-action="up" ${index===0?"disabled":""} aria-label="Move task up">↑</button><button type="button" data-node-action="down" ${index===nodes.length-1?"disabled":""} aria-label="Move task down">↓</button></div></div><div class="routine-node-fields"><label class="node-field">Node type<select data-node-field="type">${types.map(type=>`<option value="${type}" ${node.type===type?"selected":""}>${type.replaceAll("_"," ")}</option>`).join("")}</select></label><label class="node-field">Agent ID<input data-node-field="agent_id" value="${escapeHtml(node.agent_id||"")}" placeholder="AG-16"></label><label class="node-field">Micro-agent ID<input data-node-field="micro_agent_id" value="${escapeHtml(node.micro_agent_id||"")}" placeholder="Optional"></label><label class="node-field">Tool ID<input data-node-field="tool_id" value="${escapeHtml(node.tool_id||"")}" placeholder="tool.get_metrics"></label><label class="node-field wide">Task label<input data-node-field="label" value="${escapeHtml(node.label||"")}" placeholder="Describe this task"></label><label class="node-field">Operation<input data-node-field="operation" value="${escapeHtml(node.operation||"")}" placeholder="correlate"></label><label class="node-field">Parallel group<input data-node-field="parallel_group" value="${escapeHtml(node.parallel_group||"")}" placeholder="Optional group"></label><label class="node-field">Timeout seconds<input data-node-field="timeout_seconds" type="number" min="0" max="600" value="${Number(node.timeout_seconds??30)}"></label><label class="node-field">Retries<input data-node-field="retries" type="number" min="0" max="5" value="${Number(node.retries??0)}"></label><label class="node-field wide">Condition JSON<input data-node-field="condition" value="${escapeHtml(node.condition?JSON.stringify(node.condition):"")}" placeholder='{"field":"alert.severity","operator":"equals","value":"high"}'></label></div><div class="routine-node-footer"><button type="button" data-node-action="remove">Remove task</button></div></article>`).join(""):'<div class="empty">Add the first agent, micro-agent, tool, decision, or approval node.</div>';
+  $("routineCanvas").querySelectorAll(".routine-node").forEach(card=>{
+    const index=Number(card.dataset.nodeIndex);
+    card.querySelectorAll("[data-node-field]").forEach(field=>field.addEventListener("change",()=>{
+      const key=field.dataset.nodeField;let value=field.value;
+      if(key==="timeout_seconds"||key==="retries")value=Number(value);
+      if(key==="condition"){
+        try{value=value.trim()?JSON.parse(value):undefined}catch(error){showActionToast("Invalid condition JSON",error.message,"error",7000);return;}
+        if(value===undefined)delete studioRoutineDraft.nodes[index].condition;else studioRoutineDraft.nodes[index].condition=value;
+      }else if(value==="")delete studioRoutineDraft.nodes[index][key];else studioRoutineDraft.nodes[index][key]=value;
+      card.dataset.nodeType=studioRoutineDraft.nodes[index].type;
+    }));
+    card.querySelectorAll("[data-node-action]").forEach(button=>button.onclick=()=>{
+      const action=button.dataset.nodeAction;
+      if(action==="remove")studioRoutineDraft.nodes.splice(index,1);
+      if(action==="up"&&index>0)[studioRoutineDraft.nodes[index-1],studioRoutineDraft.nodes[index]]=[studioRoutineDraft.nodes[index],studioRoutineDraft.nodes[index-1]];
+      if(action==="down"&&index<studioRoutineDraft.nodes.length-1)[studioRoutineDraft.nodes[index+1],studioRoutineDraft.nodes[index]]=[studioRoutineDraft.nodes[index],studioRoutineDraft.nodes[index+1]];
+      renderRoutineNodes();
+    });
+  });
+}
+$("newRoutineButton").onclick=async()=>{
+  const routine={routine_id:`routine.custom.${crypto.randomUUID().slice(0,8)}`,name:"New routine",description:"Describe what this routine investigates.",enabled:false,trigger:{services:[],keywords:[]},nodes:[]};
+  const saved=await api("/api/studio/routines",{method:"POST",body:JSON.stringify(routine)});
+  await loadStudioRoutines(saved.routine_id);
+  showActionToast("Routine created","Add nodes and trigger rules, then save and enable it.","success");
+};
+$("addRoutineNodeButton").onclick=()=>{if(!studioRoutineDraft)return;studioRoutineDraft.nodes.push({id:`task-${crypto.randomUUID().slice(0,6)}`,type:"agent",agent_id:"AG-16",operation:"correlate",label:"New agent task",timeout_seconds:30,retries:1});renderRoutineNodes();};
+$("saveRoutineButton").onclick=async()=>{try{const trigger=JSON.parse($("routineTrigger").value||"{}");studioRoutineDraft={...studioRoutineDraft,name:$("routineName").value,description:$("routineDescription").value,trigger};const saved=await api(`/api/studio/routines/${encodeURIComponent(studioRoutineDraft.routine_id)}`,{method:"PUT",body:JSON.stringify(studioRoutineDraft)});studioRoutineDraft=saved;await loadStudioRoutines(saved.routine_id);$("routineEditorMessage").textContent="Routine saved to the local Studio database.";showActionToast("Routine saved",saved.name,"success");}catch(error){$("routineEditorMessage").textContent=error.message;showActionToast("Routine was not saved",error.message,"error",8000);}};
+$("duplicateRoutineButton").onclick=async()=>{if(!studioRoutineDraft)return;const duplicate=await api(`/api/studio/routines/${encodeURIComponent(studioRoutineDraft.routine_id)}/duplicate`,{method:"POST"});await loadStudioRoutines(duplicate.routine_id);showActionToast("Routine duplicated",duplicate.name,"success");};
+$("toggleRoutineButton").onclick=async()=>{if(!studioRoutineDraft)return;const result=await api(`/api/studio/routines/${encodeURIComponent(studioRoutineDraft.routine_id)}/enabled`,{method:"PATCH",body:JSON.stringify({enabled:!studioRoutineDraft.enabled})});studioRoutineDraft=result;await loadStudioRoutines(result.routine_id);showActionToast(result.enabled?"Routine enabled":"Routine disabled",result.name,"success");};
+$("runRoutineButton").onclick=async()=>{try{const incidentId=$("incidentSelect").value;if(!incidentId)throw new Error("Select an incident in the Incidents page first.");showActionToast("Starting routine",studioRoutineDraft.name,"info",0);const run=await api(`/api/studio/routines/${encodeURIComponent(studioRoutineDraft.routine_id)}/runs`,{method:"POST",body:JSON.stringify({incident_id:incidentId})});showActionToast("Routine run started",`${run.run_id} · ${run.status.replaceAll("_"," ")}`,run.status==="failed"?"error":"success",7000);await loadStudioRuns();}catch(error){showActionToast("Routine could not run",error.message,"error",8000);}};
+async function loadStudioAgents(){
+  const [registry,stats]=await Promise.all([api("/api/studio/registries/agents"),api("/api/studio/agent-stats")]);studioAgents=registry.items||[];
+  $("agentRegistryCount").textContent=`${studioAgents.length} registered`;
+  $("agentRegistryList").innerHTML=studioAgents.map(agent=>{const stat=stats.agents?.[agent.agent_id]||{};return `<button class="studio-list-item ${studioSelectedAgent?.agent_id===agent.agent_id?"selected":""}" data-agent-id="${escapeHtml(agent.agent_id)}"><strong>${escapeHtml(agent.agent_id)} · ${escapeHtml(agent.name)}</strong><small>${escapeHtml(agent.status||"active")} · ${stat.executions||0} executions · ${Math.round((stat.success_rate||0)*100)}% success</small></button>`;}).join("");
+  $("agentRegistryList").querySelectorAll("[data-agent-id]").forEach(button=>button.onclick=()=>selectStudioAgent(button.dataset.agentId,stats.agents||{}));
+  if(!studioSelectedAgent&&studioAgents.length)selectStudioAgent(studioAgents[0].agent_id,stats.agents||{});
+}
+function selectStudioAgent(agentId,stats={}){
+  studioSelectedAgent=studioAgents.find(agent=>agent.agent_id===agentId);if(!studioSelectedAgent)return;
+  const agent=studioSelectedAgent,stat=stats[agentId]||{};
+  $("saveAgentConfig").disabled=false;
+  $("agentConfigForm").classList.remove("empty");
+  $("agentConfigForm").innerHTML=`<div class="studio-profile-row"><span>Agent ID</span><strong>${escapeHtml(agent.agent_id)}</strong></div><div class="studio-profile-row"><span>Description</span><span>${escapeHtml(agent.description)}</span></div><div class="studio-profile-row"><span>Responsibilities</span><span>${escapeHtml((agent.responsibilities||[]).join(" · "))}</span></div><div class="studio-profile-row"><span>Micro-agents</span><span>${escapeHtml((agent.micro_agents||[]).join(", "))}</span></div><label>System instructions<textarea id="agentInstructions" rows="4">${escapeHtml(agent.instructions||"")}</textarea></label><div class="studio-form-grid"><label>Model provider<select id="agentModelProvider"><option value="none">Deterministic</option><option value="ollama">Local Ollama</option></select></label><label>Model name<input id="agentModelName" value="${escapeHtml(agent.model?.model||"deterministic")}"></label><label>Temperature<input id="agentTemperature" type="number" min="0" max="2" step="0.1" value="${Number(agent.temperature??0.2)}"></label><label>Status<select id="agentStatus"><option value="active">Active</option><option value="disabled">Disabled</option></select></label></div><label class="toggle-field"><input id="agentMemoryIncident" type="checkbox" ${agent.memory?.incident?"checked":""}> Allow incident working memory</label><label class="toggle-field"><input id="agentMemoryHistory" type="checkbox" ${agent.memory?.historical?"checked":""}> Allow historical incident memory</label><div class="studio-profile-row"><span>Observed performance</span><span>${stat.executions||0} runs · ${Math.round((stat.success_rate||0)*100)}% success · ${Number(stat.average_duration_ms||0).toFixed(1)} ms average</span></div>`;
+  $("agentModelProvider").value=agent.model?.provider||"none";$("agentStatus").value=agent.status||"active";
+}
+$("saveAgentConfig").onclick=async()=>{if(!studioSelectedAgent)return;try{const model={...(studioSelectedAgent.model||{}),provider:$("agentModelProvider").value,model:$("agentModelName").value,enabled:$("agentModelProvider").value==="ollama"};const updated=await api(`/api/studio/agents/${encodeURIComponent(studioSelectedAgent.agent_id)}`,{method:"PATCH",body:JSON.stringify({instructions:$("agentInstructions").value,model,temperature:Number($("agentTemperature").value),status:$("agentStatus").value,memory:{incident:$("agentMemoryIncident").checked,historical:$("agentMemoryHistory").checked}})});studioSelectedAgent=updated;showActionToast("Agent configuration saved",updated.name,"success");await loadStudioAgents();}catch(error){showActionToast("Agent configuration failed",error.message,"error",8000);}};
+async function loadStudioMicroAgents(){
+  const [registry,stats]=await Promise.all([api("/api/studio/registries/micro_agents"),api("/api/studio/agent-stats")]);studioMicroAgents=registry.items||[];
+  $("microAgentCount").textContent=`${studioMicroAgents.length} registered`;
+  $("microAgentList").innerHTML=studioMicroAgents.map(agent=>{const stat=stats.micro_agents?.[agent.micro_agent_id]||{};return `<button class="studio-list-item ${studioSelectedMicroAgent?.micro_agent_id===agent.micro_agent_id?"selected":""}" data-micro-id="${escapeHtml(agent.micro_agent_id)}"><strong>${escapeHtml(agent.micro_agent_id)} · ${escapeHtml(agent.name)}</strong><small>${escapeHtml(agent.parent_agent_id)} · ${stat.executions||0} test executions</small></button>`;}).join("");
+  $("microAgentList").querySelectorAll("[data-micro-id]").forEach(button=>button.onclick=()=>selectStudioMicroAgent(button.dataset.microId,stats.micro_agents||{}).catch(error=>showActionToast("Profile failed to load",error.message,"error",8000)));
+  if(!studioSelectedMicroAgent&&studioMicroAgents.length)selectStudioMicroAgent(studioMicroAgents[0].micro_agent_id,stats.micro_agents||{});
+}
+async function selectStudioMicroAgent(id,stats={}){studioSelectedMicroAgent=studioMicroAgents.find(agent=>agent.micro_agent_id===id);if(!studioSelectedMicroAgent)return;const agent=studioSelectedMicroAgent,stat=stats[id]||{};const history=await api(`/api/studio/registry-executions?registry_kind=micro_agent&owner_id=${encodeURIComponent(id)}&limit=5`);$("invokeMicroAgent").disabled=false;$("microAgentProfile").classList.remove("empty");$("microAgentProfile").innerHTML=`<div class="studio-profile-row"><span>ID / Parent</span><strong>${escapeHtml(agent.micro_agent_id)} / ${escapeHtml(agent.parent_agent_id)}</strong></div><div class="studio-profile-row"><span>Objective</span><span>${escapeHtml(agent.objective)}</span></div><div class="studio-profile-row"><span>Timeout / Retry</span><span>${agent.timeout_seconds}s · ${agent.retry_policy.max_attempts} attempt(s)</span></div><div class="studio-profile-row"><span>Executions</span><span>${stat.executions||0} · ${Math.round((stat.success_rate||0)*100)}% success · ${Number(stat.average_duration_ms||0).toFixed(1)} ms avg</span></div><strong>Input schema</strong><pre>${escapeHtml(JSON.stringify(agent.input_schema,null,2))}</pre><strong>Output schema</strong><pre>${escapeHtml(JSON.stringify(agent.output_schema,null,2))}</pre><strong>Validation</strong><p>${escapeHtml((agent.validation_rules||[]).join(" · "))}</p><strong>Recent outputs</strong>${history.items.length?history.items.map(item=>`<details class="studio-run-task"><summary>${escapeHtml(item.status)} · ${Number(item.duration_ms||0).toFixed(1)} ms · ${escapeHtml(item.started_at)}</summary><pre>${escapeHtml(JSON.stringify(item.output,null,2))}</pre></details>`).join(""):'<p class="muted">No independent test calls recorded yet.</p>'}`;$("microAgentInput").value=JSON.stringify(defaultMicroAgentInput(id),null,2);}
+function defaultMicroAgentInput(id){if(["MA-10","MA-11","MA-12","MA-13","MA-14"].includes(id))return {event:{"@timestamp":new Date().toISOString(),"service.name":"api-gateway","log.level":"error",message:"Synthetic test: request failed", "event.outcome":"failure","http.response.status_code":503,"trace.id":"studio-test"},signals:[]};if(id==="MA-15")return {text:"Synthetic test review: reliable and comfortable",rating:5,synthetic:true};if(id==="MA-06"||id==="MA-18")return {service:"api-gateway",observed_services:["postgresql"]};if(id==="MA-04")return {query:"database timeout"};if(id==="MA-01"||id==="MA-02")return {alert:{alert_id:"studio-test",service:"api-gateway",severity:"high",signal:{type:"log_failure",message:"HTTP 503"},event_evidence:{trace_id:"studio-test"}},alerts:[]};return {incident:{incident_id:"studio-test",service:"postgresql",severity:"high",status:"pending_review",alert:{signal:{type:"log_failure",message:"QueryTimeout"}},evidence:{trace_events:[],correlation:{microagents:{}}}},rca:{hypotheses:[]},hypotheses:[],proposed_action:{title:"Inspect service",target:"postgresql"},plan:{actions:[{title:"Inspect service",status:"awaiting_approval"}]},ticket:{ticket_id:"POC-STUDIO",status:"open"},status:"in_progress"};}
+$("invokeMicroAgent").onclick=async()=>{if(!studioSelectedMicroAgent)return;try{const input=JSON.parse($("microAgentInput").value||"{}");showActionToast("Running micro-agent test",studioSelectedMicroAgent.micro_agent_id,"info",0);const result=await api(`/api/studio/micro-agents/${encodeURIComponent(studioSelectedMicroAgent.micro_agent_id)}/execute`,{method:"POST",body:JSON.stringify({input})});$("microAgentOutput").textContent=JSON.stringify(result,null,2);showActionToast("Micro-agent test finished",`${studioSelectedMicroAgent.micro_agent_id} · ${result.status}`,result.status==="completed"?"success":"error");}catch(error){$("microAgentOutput").textContent=error.message;showActionToast("Micro-agent test failed",error.message,"error",8000);}};
+async function loadStudioTools(){const response=await api("/api/studio/registries/tools");studioTools=response.items||[];$("toolCount").textContent=`${studioTools.length} registered`;$("toolRegistryList").innerHTML=studioTools.map(tool=>`<button class="studio-list-item ${studioSelectedTool?.tool_id===tool.tool_id?"selected":""}" data-tool-id="${escapeHtml(tool.tool_id)}"><strong>${escapeHtml(tool.name)}</strong><small>${escapeHtml(tool.permission)} · ${escapeHtml(tool.description)}</small></button>`).join("");$("toolRegistryList").querySelectorAll("[data-tool-id]").forEach(button=>button.onclick=()=>selectStudioTool(button.dataset.toolId).catch(error=>showActionToast("Tool profile failed",error.message,"error",8000)));if(!studioSelectedTool&&studioTools.length)await selectStudioTool(studioTools[0].tool_id);}
+async function selectStudioTool(id){studioSelectedTool=studioTools.find(tool=>tool.tool_id===id);if(!studioSelectedTool)return;const tool=studioSelectedTool;const history=await api(`/api/studio/registry-executions?registry_kind=tool&owner_id=${encodeURIComponent(id)}&limit=5`);$("executeToolButton").disabled=false;$("toolProfile").classList.remove("empty");$("toolProfile").innerHTML=`<div class="studio-profile-row"><span>Tool ID</span><strong>${escapeHtml(tool.tool_id)}</strong></div><div class="studio-profile-row"><span>Description</span><span>${escapeHtml(tool.description)}</span></div><div class="studio-profile-row"><span>Permission</span><strong>${escapeHtml(tool.permission)}</strong></div><strong>Input schema</strong><pre>${escapeHtml(JSON.stringify(tool.input_schema,null,2))}</pre><strong>Output schema</strong><pre>${escapeHtml(JSON.stringify(tool.output_schema,null,2))}</pre><strong>Recent executions</strong>${history.items.length?history.items.map(item=>`<details class="studio-run-task"><summary>${escapeHtml(item.status)} · ${Number(item.duration_ms||0).toFixed(1)} ms · ${escapeHtml(item.started_at)}</summary><pre>${escapeHtml(JSON.stringify(item.output,null,2))}</pre></details>`).join(""):'<p class="muted">No tool invocations recorded yet.</p>'}`;$("toolConfirmRow").hidden=!['operator_action','simulation_only'].includes(tool.permission);$("toolConfirm").checked=false;$("toolInput").value=JSON.stringify(defaultToolInput(tool.tool_id),null,2);}
+function defaultToolInput(id){if(id==="tool.inspect_traces")return {trace_id:""};if(id==="tool.inspect_dependencies")return {service:"api-gateway"};if(id==="tool.get_metrics"||id==="tool.verify_recovery")return {service:"api-gateway"};if(id==="tool.search_sops"||id==="tool.search_logs"||id==="tool.search_historical_incidents")return {query:"timeout"};if(id==="tool.generate_remediation_plan")return {incident_id:$ ("incidentSelect").value||""};if(id==="tool.create_local_ticket")return {incident_id:$ ("incidentSelect").value||""};if(id==="tool.simulate_recovery")return {confirm:false};return {};}
+$("executeToolButton").onclick=async()=>{if(!studioSelectedTool)return;try{const input=JSON.parse($("toolInput").value||"{}");if(!$("toolConfirmRow").hidden)input.confirm=$("toolConfirm").checked;showActionToast("Executing local tool",studioSelectedTool.name,"info",0);const result=await api(`/api/studio/tools/${encodeURIComponent(studioSelectedTool.tool_id)}/execute`,{method:"POST",body:JSON.stringify({input})});$("toolOutput").textContent=JSON.stringify(result,null,2);showActionToast("Tool finished",`${studioSelectedTool.name} · ${result.status}`,"success");}catch(error){$("toolOutput").textContent=error.message;showActionToast("Tool execution failed",error.message,"error",8000);}};
+async function loadStudioMemory(){await searchStudioMemory();}
+async function searchStudioMemory(){const query=new URLSearchParams({query:$("memoryQuery").value||"",limit:"100"});if($("memorySearchScope").value)query.set("scope",$("memorySearchScope").value);const result=await api(`/api/studio/memory?${query}`);$("memoryResults").innerHTML=result.items.length?result.items.map(item=>`<article class="studio-result-row"><strong>${escapeHtml(item.scope)}${item.incident_id?` · ${escapeHtml(item.incident_id)}`:""}</strong><p>${escapeHtml(item.content)}</p><small>${escapeHtml(item.created_at)}</small></article>`).join(""):'<div class="empty">No matching local memory.</div>';}
+$("searchMemoryButton").onclick=()=>searchStudioMemory().catch(error=>showActionToast("Memory search failed",error.message,"error",8000));
+$("saveMemoryButton").onclick=async()=>{try{const content=$("memoryContent").value.trim();if(!content)throw new Error("Enter a note before saving.");await api("/api/studio/memory",{method:"POST",body:JSON.stringify({scope:$("memoryScope").value,incident_id:$("memoryIncidentId").value.trim()||null,content})});$("memoryContent").value="";await searchStudioMemory();showActionToast("Memory saved","The note was stored in the local Studio database.","success");}catch(error){showActionToast("Memory not saved",error.message,"error",8000);}};
+async function loadStudioRuns(){const result=await api("/api/studio/runs?limit=100");$("studioRunCount").textContent=`${result.items.length} recent`;$("studioRunList").innerHTML=result.items.length?result.items.map(run=>`<button class="studio-list-item ${studioSelectedRun===run.run_id?"selected":""}" data-run-id="${escapeHtml(run.run_id)}"><strong>${escapeHtml(run.routine_name)} · ${escapeHtml(run.status.replaceAll("_"," "))}</strong><small>${escapeHtml(run.run_id)} · ${escapeHtml(run.incident_id||"manual run")} · ${escapeHtml(run.started_at)}</small></button>`).join(""):'<div class="empty">No routine runs yet. Run one from Routine Studio.</div>';$("studioRunList").querySelectorAll("[data-run-id]").forEach(button=>button.onclick=()=>loadStudioRun(button.dataset.runId));if(studioSelectedRun&&result.items.some(run=>run.run_id===studioSelectedRun))await loadStudioRun(studioSelectedRun);}
+async function loadStudioRun(id){studioSelectedRun=id;const run=await api(`/api/studio/runs/${encodeURIComponent(id)}`);$("studioRunDetails").classList.remove("empty");$("studioRunDetails").innerHTML=`<div class="studio-profile-row"><span>Routine / status</span><strong>${escapeHtml(run.routine_name)} · ${escapeHtml(run.status.replaceAll("_"," "))}</strong></div><div class="studio-profile-row"><span>Selection reason</span><span>${escapeHtml(run.selected_reason)}</span></div><div class="studio-profile-row"><span>Incident / duration</span><span>${escapeHtml(run.incident_id||"manual run")} · ${run.duration_ms??"running"} ms</span></div>${run.tasks.map(task=>`<article class="studio-run-task"><header><strong>${escapeHtml(task.node_id)} · ${escapeHtml(task.status.replaceAll("_"," "))}</strong><small>${Number(task.duration_ms||0).toFixed(1)} ms · ${task.attempt} attempt(s)</small></header>${task.error?`<p class="error-message">${escapeHtml(task.error)}</p>`:""}<details><summary>Input / output / evidence</summary><pre>${escapeHtml(JSON.stringify({input:task.input,output:task.output,evidence:task.evidence},null,2))}</pre></details></article>`).join("")}`;}
+$("refreshStudioRuns").onclick=()=>loadStudioRuns().catch(error=>showActionToast("Run list failed",error.message,"error",8000));
+async function loadStudioEvaluations(){const result=await api("/api/studio/evaluations");$("evaluationHistory").innerHTML=result.items.length?result.items.map(item=>`<button class="studio-list-item" data-evaluation-id="${escapeHtml(item.evaluation_id)}"><strong>${escapeHtml(item.suite)} · ${escapeHtml(item.status)}</strong><small>${escapeHtml(item.created_at)}</small></button>`).join(""):'<div class="empty">No evaluations yet.</div>';if(result.items.length)renderStudioEvaluation(result.items[0]);$("evaluationHistory").querySelectorAll("[data-evaluation-id]").forEach(button=>button.onclick=()=>{const item=result.items.find(entry=>entry.evaluation_id===button.dataset.evaluationId);if(item)renderStudioEvaluation(item);});}
+function renderStudioEvaluation(item){const result=item.result||{};$("evaluationSummary").textContent=`${result.passed??0}/${result.total??0} passed · ${item.created_at}`;$("evaluationResult").innerHTML=(result.cases||[]).map(test=>`<article class="studio-result-row"><strong>${test.passed?"PASS":"FAIL"} · ${escapeHtml(test.service)}</strong><p>Expected ${escapeHtml(test.expected)} · selected ${escapeHtml(test.selected)}</p><small>${escapeHtml(test.reason)}</small></article>`).join("")||'<pre>No case details.</pre>';}
+$("runStudioEvaluation").onclick=async()=>{try{showActionToast("Running synthetic evaluation","Checking routine selection against known scenarios…","info",0);const item=await api("/api/studio/evaluations/run",{method:"POST"});renderStudioEvaluation(item);await loadStudioEvaluations();showActionToast("Evaluation complete",`${item.result.passed}/${item.result.total} routine-selection cases passed.`,item.result.passed===item.result.total?"success":"warning");}catch(error){showActionToast("Evaluation failed",error.message,"error",8000);}};
+function renderErrorTrend() {
+  const svg = $("errorTrendChart");
+  if (!svg) return;
+  const width = 720, height = 190, left = 42, right = 12, top = 14, bottom = 28;
+  const samples = trendSamples.slice(-30);
+  const maxValue = Math.max(.5, ...samples.map(sample => sample.errorRate * 1.25));
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const points = samples.map((sample,index) => {
+    const x = left + (samples.length < 2 ? plotWidth : index * plotWidth / (samples.length - 1));
+    const y = top + plotHeight - sample.errorRate / maxValue * plotHeight;
+    return [x,y];
+  });
+  const linePath = points.map((point,index) => `${index ? "L" : "M"}${point[0].toFixed(1)},${point[1].toFixed(1)}`).join(" ");
+  const areaPath = points.length ? `${linePath} L${points[points.length-1][0]},${top+plotHeight} L${points[0][0]},${top+plotHeight} Z` : "";
+  const grid = [0,.5,1].map(fraction => {
+    const y = top + plotHeight * fraction;
+    const value = (maxValue * (1-fraction)).toFixed(1);
+    return `<line class="chart-grid" x1="${left}" y1="${y}" x2="${width-right}" y2="${y}"></line><text class="chart-axis" x="4" y="${y+3}">${value}%</text>`;
+  }).join("");
+  const latestPoint = points.at(-1);
+  svg.innerHTML = `${grid}${areaPath ? `<path class="chart-area" d="${areaPath}"></path><path class="chart-line" d="${linePath}"></path><circle cx="${latestPoint[0]}" cy="${latestPoint[1]}" r="4" fill="#f2bd66" stroke="#17231c" stroke-width="2"><title>Current error rate ${samples.at(-1).errorRate.toFixed(1)}%</title></circle>` : ""}<text class="chart-axis" x="${left}" y="${height-7}">Earlier</text><text class="chart-axis" text-anchor="end" x="${width-right}" y="${height-7}">Now</text>`;
+  $("errorChartCurrent").textContent = samples.length ? `${samples[samples.length-1].errorRate.toFixed(1)}%` : "--";
+}
+function renderResourceBars(simulator) {
+  const dbPercent = simulator.db_connections_max
+    ? simulator.db_connections_active / simulator.db_connections_max * 100
+    : 0;
+  const memoryPercent = simulator.memory_limit_mb
+    ? simulator.memory_mb / simulator.memory_limit_mb * 100
+    : Math.min(100, simulator.memory_mb / 10);
+  const resources = [
+    {label:"Database pool",value:dbPercent,display:`${simulator.db_connections_active} / ${simulator.db_connections_max}`},
+    {label:"Message lag",value:Math.min(100,simulator.kafka_consumer_lag / 10),display:simulator.kafka_consumer_lag.toLocaleString()},
+    {label:"Memory",value:memoryPercent,display:`${simulator.memory_mb} MB`}
+  ];
+  $("resourceBars").innerHTML = resources.map(resource=>`<div class="severity-row"><span>${resource.label}</span><div class="severity-track"><div class="severity-fill ${resource.value>80?"high":resource.value>55?"medium":""}" style="width:${Math.max(2,resource.value)}%"></div></div><strong>${resource.display}</strong></div>`).join("");
+}
+function renderOverviewIncidents() {
+  const body = $("overviewIncidentRows");
+  if (!latestIncidents.length) {
+    body.innerHTML = '<tr><td colspan="3" class="muted">No incidents need attention. Monitoring continues.</td></tr>';
+    return;
+  }
+  body.innerHTML = latestIncidents.slice(0,5).map(incident=>`<tr data-incident="${escapeHtml(incident.incident_id)}"><td>${escapeHtml(incident.incident_id)}</td><td>${escapeHtml(graphLabels[normalizedService(incident.service)]||incident.service)}</td><td><span class="severity-pill ${escapeHtml(incident.severity)}">${escapeHtml(incident.severity)} · ${escapeHtml(incident.status.replaceAll("_"," "))}</span></td></tr>`).join("");
+  body.querySelectorAll("[data-incident]").forEach(row=>row.addEventListener("click",()=>{
+    $("incidentSelect").value=row.dataset.incident;
+    loadIncidentDetails().then(()=>showPage("incidents"));
+  }));
+}
+function renderIncidentTable() {
+  const body = $("incidentsTableBody");
+  if (!body) return;
+  const statusFilter = $("incidentStateFilter").value;
+  const severityFilter = $("incidentSeverityFilter").value;
+  const selected = $("incidentSelect").value;
+  const visible = latestIncidents.filter(incident =>
+    (statusFilter === "all" || (statusFilter === "open" ? incident.status !== "closed" : incident.status === statusFilter)) &&
+    (severityFilter === "all" || incident.severity === severityFilter)
+  );
+  incidentPageSize = Number($("incidentPageSize").value) || incidentPageSize;
+  const pageCount = Math.max(1, Math.ceil(visible.length / incidentPageSize));
+  incidentPage = Math.min(incidentPage, pageCount);
+  const start = visible.length ? (incidentPage - 1) * incidentPageSize : 0;
+  const pageItems = visible.slice(start, start + incidentPageSize);
+  const rangeStart = visible.length ? start + 1 : 0;
+  const rangeEnd = Math.min(start + incidentPageSize, visible.length);
+  $("incidentQueueSummary").textContent = `Showing ${rangeStart}-${rangeEnd} of ${visible.length} prioritized issue(s)`;
+  $("incidentPageLabel").textContent = `Page ${incidentPage} of ${pageCount}`;
+  $("incidentPrevPage").disabled = incidentPage <= 1;
+  $("incidentNextPage").disabled = incidentPage >= pageCount;
+  if (!visible.length) {
+    body.innerHTML = '<tr><td colspan="4" class="queue-empty">No incidents match these filters.</td></tr>';
+    return;
+  }
+  body.innerHTML = pageItems.map(incident=>`<tr data-incident="${escapeHtml(incident.incident_id)}" class="${incident.incident_id===selected?"active-row":""}"><td>${escapeHtml(incident.incident_id)}</td><td>${escapeHtml(graphLabels[normalizedService(incident.service)]||incident.service)}</td><td><span class="severity-pill ${escapeHtml(incident.severity)}">${escapeHtml(incident.severity)}</span></td><td>${escapeHtml(incident.status.replaceAll("_"," "))}</td></tr>`).join("");
+  body.querySelectorAll("[data-incident]").forEach(row=>row.addEventListener("click",()=>{
+    $("incidentSelect").value=row.dataset.incident;
+    $("topologyIncidentSelect").value=row.dataset.incident;
+    loadIncidentDetails();
+    renderIncidentTable();
+  }));
+}
+function normalizedService(service) {
+  return service === "api" ? "api-gateway" : service;
+}
+function currentGraphLayout() {
+  const mobile = window.matchMedia("(max-width: 650px)").matches;
+  return mobile
+    ? {positions:mobileGraphPositions,labels:mobileGraphLabels,width:360,height:500,nodeWidth:104}
+    : {positions:graphPositions,labels:graphLabels,width:960,height:360,nodeWidth:152};
+}
+function incidentTraceEvents(incident) {
+  const eventsById = new Map();
+  for (const event of incident?.evidence?.trace_events || []) {
+    const id = String(event["event.id"] || `${event["@timestamp"]}:${event["service.name"]}`);
+    eventsById.set(id, {
+      id,
+      service: normalizedService(String(event["service.name"] || "unknown")),
+      timestamp: event["@timestamp"] || "",
+      severity: event["log.level"] || "info",
+      action: event["event.action"] || "",
+      message: event.message || "Operational event"
+    });
+  }
+  return [...eventsById.values()];
+}
+function renderServiceEvidence(service) {
+  const events = incidentTraceEvents(activeIncident).filter(event => event.service === service);
+  const nodeState = service === normalizedService(String(activeIncident?.service || ""))
+    ? "Affected service"
+    : events.length ? "Observed in incident trace" : "Related dependency";
+  $("graphServiceTitle").textContent = graphLabels[service] || service || "No service selected";
+  $("graphServiceSummary").textContent = service
+    ? `${nodeState} · ${topology.edges.filter(edge => edge.source === service || edge.target === service).length} mapped dependency link(s).`
+    : "Select a service node to inspect its evidence.";
+  $("graphServiceState").textContent = nodeState;
+  $("graphEventCount").textContent = String(events.length);
+  $("graphEvidence").innerHTML = events.length
+    ? events.slice(0, 5).map(event => `<div class="evidence-event"><strong>${escapeHtml(event.severity.toUpperCase())} · ${escapeHtml(event.action || "service event")}</strong><span>${escapeHtml(event.message)}</span><code>${escapeHtml(event.id)}</code></div>`).join("")
+    : '<div class="evidence-event"><span>No trace event was retained for this service in the selected incident.</span></div>';
+}
+function renderTopology(incident) {
+  activeIncident = incident;
+  const layout = currentGraphLayout();
+  const events = incidentTraceEvents(incident);
+  const observed = new Set(events.map(event => event.service));
+  for (const related of incident?.alert?.related_alerts || []) {
+    if (related.actionable !== false) observed.add(normalizedService(String(related.service || "")));
+  }
+  const affected = normalizedService(String(incident?.service || incident?.alert?.service || ""));
+  const incidentId = incident?.incident_id || "";
+  if (incidentId !== topologyIncidentId) {
+    topologyIncidentId = incidentId;
+    selectedGraphService = affected || topology.nodes[0] || "";
+  }
+  if (!selectedGraphService || !topology.nodes.includes(selectedGraphService)) selectedGraphService = affected || topology.nodes[0] || "";
+  const positions = layout.positions;
+  const edgeMarkup = topology.edges.map(edge => {
+    const source = positions[edge.source];
+    const target = positions[edge.target];
+    if (!source || !target) return "";
+    const dx = target.x - source.x;
+    const dy = target.y - source.y;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    const nodeRadiusX = layout.nodeWidth / 2 + 3;
+    const startX = source.x + dx / distance * nodeRadiusX;
+    const startY = source.y + dy / distance * 20;
+    const endX = target.x - dx / distance * (nodeRadiusX + 5);
+    const endY = target.y - dy / distance * 20;
+    const activeEdge = observed.has(edge.source) && observed.has(edge.target);
+    const impactEdge = edge.source === affected || edge.target === affected;
+    const edgeClass = activeEdge ? "observed" : impactEdge ? "impact" : "";
+    const bend = Math.max(-28, Math.min(28, dy * .12));
+    const middleX = (startX + endX) / 2;
+    const middleY = (startY + endY) / 2 + bend;
+    return `<path class="graph-edge ${edgeClass}" d="M ${startX} ${startY} Q ${middleX} ${middleY} ${endX} ${endY}" marker-end="url(#graphArrow)"><title>${escapeHtml(graphLabels[edge.source] || edge.source)} depends on ${escapeHtml(graphLabels[edge.target] || edge.target)}</title></path>`;
+  }).join("");
+  const nodeMarkup = topology.nodes.map(service => {
+    const position = positions[service];
+    if (!position) return "";
+    const isAffected = service === affected;
+    const isObserved = observed.has(service);
+    const state = isAffected ? "AFFECTED" : isObserved ? "IN TRACE" : "RELATED";
+    const eventCount = events.filter(event => event.service === service).length;
+    const nodeClass = `${isAffected ? "affected" : isObserved ? "observed" : ""} ${selectedGraphService === service ? "selected" : ""}`;
+    const label = layout.labels[service] || graphLabels[service] || service;
+    const halfWidth = layout.nodeWidth / 2;
+    const textX = -halfWidth + 15;
+    const eventLabel = eventCount === 1 ? "EVENT" : "EVENTS";
+    return `<g class="graph-node ${nodeClass}" data-service="${escapeHtml(service)}" transform="translate(${position.x} ${position.y})" tabindex="0" role="button" aria-label="Inspect ${escapeHtml(label)} evidence"><title>${escapeHtml(label)}: ${state}; ${eventCount} retained event(s)</title><rect x="-${halfWidth}" y="-22" width="${layout.nodeWidth}" height="44" rx="7"></rect><circle class="node-dot" cx="-${halfWidth-9}" cy="0" r="4"></circle><text class="node-name" x="${textX}" y="-2">${escapeHtml(label)}</text><text class="node-state" x="${textX}" y="13">${state}${eventCount ? ` · ${eventCount} ${eventLabel}` : ""}</text></g>`;
+  }).join("");
+  const guides = Array.from({length:Math.floor(layout.height / 100)},(_,index)=>(index+1)*100);
+  $("graphCanvas").innerHTML = `${guides.map(y=>`<line class="graph-grid" x1="12" y1="${y}" x2="${layout.width-12}" y2="${y}"></line>`).join("")}${edgeMarkup}${nodeMarkup}`;
+  const hasIncident = Boolean(incident);
+  $("topologySubtitle").textContent = hasIncident
+    ? `${incident.incident_id} · ${graphLabels[affected] || incident.service} highlighted · ${observed.size} service(s) observed in this trace`
+    : "Live service dependencies · select an incident to highlight trace evidence.";
+  renderServiceEvidence(selectedGraphService);
+  $("graphCanvas").querySelectorAll(".graph-node").forEach(node => {
+    const selectNode = () => {
+      selectedGraphService = node.dataset.service;
+      renderTopology(activeIncident);
+    };
+    node.addEventListener("click", selectNode);
+    node.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectNode();
+      }
+    });
+  });
+  applyGraphZoom();
+}
+function applyGraphZoom() {
+  const layout = currentGraphLayout();
+  const width = layout.width / graphZoom;
+  const height = layout.height / graphZoom;
+  $("dependencyGraph").setAttribute("viewBox", `${(layout.width-width)/2} ${(layout.height-height)/2} ${width} ${height}`);
+}
+$("graphZoomIn").onclick = () => { graphZoom = Math.min(1.45, graphZoom + .12); applyGraphZoom(); };
+$("graphZoomOut").onclick = () => { graphZoom = Math.max(.82, graphZoom - .12); applyGraphZoom(); };
+$("graphFit").onclick = () => { graphZoom = 1; applyGraphZoom(); };
+window.addEventListener("resize", () => renderTopology(activeIncident));
+async function loadTopology() {
+  topology = await api("/api/orchestrator/topology");
+  renderTopology(null);
+}
 async function updateKbStatus() {
   const status = await api("/api/kb/status");
   const agents = status.microagents;
   const chroma = agents["MA-04_document_knowledge_retrieval"];
   const os = agents["MA-05_log_knowledge_retrieval"];
+  let documentStore = "Document store unavailable";
+  if (chroma.backend === "chroma") documentStore = `Chroma: ${chroma.chunks} indexed chunks`;
+  else if (chroma.available) documentStore = `Local SQLite lexical index: ${chroma.chunks} chunks`;
+  const logStore = os.configured
+    ? `OpenSearch: ${os.indexed} indexed, ${os.queue_depth} queued`
+    : "OpenSearch: not configured (local log buffer active)";
   $("kbStatus").textContent =
-    `Chroma: ${chroma.available ? `${chroma.chunks} indexed chunks` : "unavailable — install requirements.txt"} · ` +
-    `OpenSearch: ${os.configured ? `${os.indexed} indexed, ${os.queue_depth} queued` : "not configured (local log buffer active)"}`;
+    `${documentStore} · ${logStore}`;
 }
 async function updateMonitoring() {
   const [status, health, alerts] = await Promise.all([
@@ -185,6 +1256,12 @@ async function updateMonitoring() {
   $("monitorStatus").textContent =
     `${status.agent} · ${status.events_processed.toLocaleString()} processed · ` +
     `${status.malformed_events.toLocaleString()} malformed · queue ${collector.queue_depth}/${collector.queue_capacity}`;
+  $("processedEventCount").textContent = status.events_processed.toLocaleString();
+  const actionableSignals = alerts.items.filter(item => !(
+    (item.service === "api" && ["threshold_anomaly", "baseline_anomaly"].includes(item.signal?.type))
+    || item.signal?.type === "baseline_anomaly"
+  ));
+  $("activeAlertCount").textContent = actionableSignals.length.toLocaleString();
   $("monitorHealth").textContent = JSON.stringify(health.services, null, 2);
   $("monitorAlerts").textContent = JSON.stringify(alerts.items, null, 2);
   $("monitorConnectors").textContent = JSON.stringify({
@@ -196,6 +1273,239 @@ async function updateMonitoring() {
     ? `${feedback.review_count} clearly synthetic Royal Enfield reviews · sentiment: ${JSON.stringify(feedback.sentiment_counts)} · top topics: ${JSON.stringify(Object.entries(feedback.topic_counts || {}).slice(0, 5))}`
     : "Synthetic review file has not been generated yet.";
 }
+async function updateOrchestrator() {
+  const result = await api("/api/orchestrator/incidents/summary?limit=100");
+  const actionableIncidents = result.items.filter(item => !(
+    item.service === "api" &&
+    ["threshold_anomaly", "baseline_anomaly"].includes(item.alert?.signal?.type)
+  ));
+  const groupedIncidents = new Map();
+  actionableIncidents.forEach(item => {
+    const traceId = item.alert?.event_evidence?.trace_id;
+    const key = traceId && traceId !== "-" ? traceId : item.incident_id;
+    const current = groupedIncidents.get(key);
+    const itemSignals = item.alert?.related_alerts?.length || 1;
+    const currentSignals = current?.alert?.related_alerts?.length || 1;
+    if (!current || itemSignals > currentSignals) groupedIncidents.set(key, item);
+  });
+  const mostRecentIncident = [...groupedIncidents.values()].sort(
+    (left, right) => right.created_at.localeCompare(left.created_at)
+  )[0];
+  const severityRank = {high:3,medium:2,low:1};
+  const reviewRank = {pending_review:2,acknowledged:1,closed:0};
+  const incidents = [...groupedIncidents.values()].sort((left,right) =>
+    (severityRank[right.severity] || 0) - (severityRank[left.severity] || 0)
+    || (reviewRank[right.status] || 0) - (reviewRank[left.status] || 0)
+    || right.created_at.localeCompare(left.created_at)
+  );
+  latestIncidents = incidents;
+  renderOverviewIncidents();
+  $("navIncidentCount").textContent = String(incidents.filter(item=>item.status!=="closed").length);
+  const openIncidents = incidents.filter(item => item.status !== "closed");
+  $("openIncidentCount").textContent = openIncidents.length.toLocaleString();
+  $("orchestratorStatus").textContent = `Monitoring automatically investigates new alerts · ${incidents.length} incident record${incidents.length === 1 ? "" : "s"}`;
+  const select = $("incidentSelect");
+  const previous = select.value;
+  select.innerHTML = incidents.length
+    ? incidents.map(item => `<option value="${escapeHtml(item.incident_id)}">${escapeHtml(item.incident_id)} · ${escapeHtml(item.status)} · ${escapeHtml(item.service)}</option>`).join("")
+    : '<option value="">No incidents yet</option>';
+  const topologySelect = $("topologyIncidentSelect");
+  const topologyPrevious = topologySelect.value;
+  topologySelect.innerHTML = incidents.length
+    ? incidents.map(item=>`<option value="${escapeHtml(item.incident_id)}">${escapeHtml(item.incident_id)} · ${escapeHtml(item.service)}</option>`).join("")
+    : '<option value="">No incidents yet</option>';
+  if (mostRecentIncident && mostRecentIncident.incident_id !== newestIncidentId) {
+    newestIncidentId = mostRecentIncident.incident_id;
+    select.value = newestIncidentId;
+  } else if (incidents.some(item => item.incident_id === previous)) select.value = previous;
+  else if (incidents.length) select.value = incidents[0].incident_id;
+  topologySelect.value = incidents.some(item=>item.incident_id===topologyPrevious) ? topologyPrevious : select.value;
+  renderIncidentTable();
+  $("acknowledgeIncident").disabled = !select.value;
+  $("closeIncident").disabled = !select.value;
+  await loadIncidentDetails();
+}
+async function loadIncidentDetails() {
+  const incidentId = $("incidentSelect").value;
+  if (!incidentId) {
+    $("incidentDetails").textContent = "Select or create an investigation to inspect its evidence.";
+    $("correlationDetails").textContent = "Correlation results appear when an investigation is created.";
+    $("acknowledgeIncident").disabled = true;
+    $("closeIncident").disabled = true;
+    renderPOCWorkflow(null);
+    renderTopology(null);
+    return;
+  }
+  const incident = await api(`/api/orchestrator/incidents/${encodeURIComponent(incidentId)}`);
+  $("incidentDetails").textContent = JSON.stringify(incident, null, 2);
+  $("correlationDetails").textContent = JSON.stringify(
+    incident.evidence?.correlation || {state:"No correlation result stored for this earlier investigation."},
+    null,
+    2
+  );
+  renderPOCWorkflow(incident);
+  renderTopology(incident);
+}
+function renderPOCWorkflow(incident) {
+  const workflow = incident?.poc;
+  const rca = workflow?.rca;
+  const hypothesis = rca?.hypotheses?.[0];
+  const action = workflow?.resolution?.actions?.[0];
+  const ticket = workflow?.ticket;
+  const report = workflow?.report;
+  renderAgentRun(incident);
+  const traceEvents = incident?.evidence?.trace_events || [];
+  const impact = incident?.impact || {};
+  const relatedAlerts = incident?.alert?.related_alerts || [];
+  const affectedServices = new Set([
+    ...(impact.affected_services || []),
+    ...traceEvents.map(event => event["service.name"]).filter(Boolean),
+    ...relatedAlerts.map(item => item.service).filter(Boolean),
+    ...(incident?.service ? [incident.service] : [])
+  ]);
+  const traceIds = new Set([
+    ...(incident?.deduplication?.trace_ids || []),
+    ...traceEvents.map(event => event["trace.id"]).filter(id => id && id !== "-")
+  ]);
+  const signalCount = impact.signal_count || incident?.alert?.related_actionable_signal_count || relatedAlerts.length || 1;
+  const lastEventTime = traceEvents.map(event => event["@timestamp"]).filter(Boolean).sort().at(-1);
+  const lastSeen = impact.last_seen || lastEventTime || incident?.alert?.first_seen || incident?.updated_at;
+  const lastSeenMs = lastSeen ? Date.parse(lastSeen) : NaN;
+  const ageMinutes = Number.isFinite(lastSeenMs) ? Math.max(0, Math.floor((Date.now() - lastSeenMs) / 60000)) : null;
+  const recency = incident?.status === "closed"
+    ? "Incident closed"
+    : ageMinutes === null ? "Last signal time unavailable"
+    : ageMinutes < 1 ? "Last signal just now · recent"
+    : ageMinutes < 5 ? `Last signal ${ageMinutes} min ago · recent`
+    : `Last signal ${ageMinutes} min ago · quiet for 5+ min`;
+  const serviceNames = [...affectedServices].map(service => graphLabels[normalizedService(service)] || service.replaceAll("-", " ")).sort();
+  $("impactServices").textContent = !incident ? "Select an incident" : serviceNames.length ? serviceNames.join(", ") : "No service names in retained evidence";
+  $("impactSignals").textContent = incident ? `${signalCount} signal${signalCount === 1 ? "" : "s"} · ${impact.trace_count ?? traceIds.size} trace${(impact.trace_count ?? traceIds.size) === 1 ? "" : "s"}` : "0 signals · 0 traces";
+  $("impactRecency").textContent = incident ? recency : "No incident selected";
+  const primaryEvent = traceEvents.find(event => event["service.name"] === incident?.service) || traceEvents[0] || {};
+  const serviceLabel = graphLabels[normalizedService(incident?.service || "unknown")] || incident?.service || "affected service";
+  const errorType = String(primaryEvent["error.type"] || "");
+  const eventMessage = String(primaryEvent.message || incident?.alert?.signal?.message || "");
+  const isGenericHypothesis = !hypothesis || ["Service request failure", "Monitoring alert"].includes(hypothesis.title);
+  const observedTitle = incident?.service === "postgresql" && /timeout/i.test(`${errorType} ${eventMessage}`)
+    ? "PostgreSQL query timeout"
+    : errorType ? `${serviceLabel}: ${errorType}` : `${serviceLabel} request failure`;
+  $("rcaTitle").textContent = isGenericHypothesis ? observedTitle : hypothesis.title;
+  $("rcaRationale").textContent = isGenericHypothesis && (errorType || eventMessage)
+    ? `Observed ${eventMessage || errorType} on ${serviceLabel}${errorType ? ` (${errorType})` : ""}. This is evidence to investigate, not a confirmed root cause.`
+    : hypothesis?.rationale || "Build an incident brief from a monitoring alert to review evidence-linked hypotheses.";
+  const timeline = traceEvents.map(event => ({
+    timestamp:event["@timestamp"] || "",
+    service:graphLabels[normalizedService(event["service.name"] || incident?.service || "unknown")] || event["service.name"] || incident?.service || "service",
+    message:event.message || event["event.action"] || "Trace event",
+    detail:[event["error.type"], event["http.response.status_code"] ? `HTTP ${Number(event["http.response.status_code"])}` : "", typeof event.latency_ms === "number" ? `${event.latency_ms} ms` : ""].filter(Boolean).join(" · "),
+    important:["error","critical","warning"].includes(String(event["log.level"] || "").toLowerCase()) || event["event.outcome"] === "failure" || Number(event["http.response.status_code"] || 0) >= 500,
+    eventId:event["event.id"] || ""
+  }));
+  const traceEventIds = new Set(timeline.map(item => item.eventId).filter(Boolean));
+  const nearbyChanges = incident?.evidence?.correlation?.microagents?.["MA-17_temporal_change_correlator"]?.nearby_changes || [];
+  for (const change of nearbyChanges) {
+    if (change.event_id && traceEventIds.has(change.event_id)) continue;
+    timeline.push({timestamp:change.timestamp || "",service:change.service || "Operational change",message:change.message || change.action || "Related change",detail:"Nearby change",eventId:change.event_id || ""});
+  }
+  timeline.sort((left,right) => left.timestamp.localeCompare(right.timestamp));
+  const limitedTimeline = timeline.slice(0, 12);
+  const preview = limitedTimeline.filter(item => item.important).slice(0, 4);
+  for (const item of limitedTimeline) {
+    if (preview.length >= 4) break;
+    if (!preview.includes(item)) preview.push(item);
+  }
+  preview.sort((left,right) => left.timestamp.localeCompare(right.timestamp));
+  const previewSet = new Set(preview);
+  const remainingTimeline = limitedTimeline.filter(item => !previewSet.has(item));
+  const renderTimelineItems = items => items.map(item => {
+      const date = item.timestamp ? new Date(item.timestamp) : null;
+      const displayTime = date && !Number.isNaN(date.valueOf()) ? date.toLocaleString() : "Time unavailable";
+      return `<li><time datetime="${escapeHtml(item.timestamp)}">${escapeHtml(displayTime)}</time><strong>${escapeHtml(item.service)}</strong><p>${escapeHtml(item.message)}${item.detail ? ` · ${escapeHtml(item.detail)}` : ""}</p>${item.eventId ? `<code>${escapeHtml(item.eventId)}</code>` : ""}</li>`;
+    }).join("");
+  $("investigationEvidence").innerHTML = preview.length
+    ? renderTimelineItems(preview)
+    : "<li>No trace-level events were retained for this incident.</li>";
+  $("additionalTimeline").innerHTML = renderTimelineItems(remainingTimeline);
+  $("timelineRemainder").hidden = remainingTimeline.length === 0;
+  $("timelineRemainder").open = false;
+  $("timelineRemainderLabel").textContent = `Show ${remainingTimeline.length} more event${remainingTimeline.length === 1 ? "" : "s"}`;
+  const relatedSignalCount = incident?.alert?.related_actionable_signal_count
+    || incident?.alert?.related_alerts?.length
+    || 1;
+  $("rcaRefs").textContent = hypothesis?.evidence_refs?.length
+    ? `${hypothesis.evidence_refs.length} evidence reference(s) · ${relatedSignalCount} related signal(s) · cause unconfirmed`
+    : `${relatedSignalCount} related signal(s) · cause unconfirmed`;
+  const genericAction = !action || ["Review the alert evidence", "Inspect the affected service"].includes(action.title);
+  let actionTitle = action?.title || "Inspect the affected service";
+  let actionDescription = action?.description || "Review the failed trace and dependency events before choosing a remediation.";
+  if (genericAction && incident?.service === "postgresql" && /timeout/i.test(`${errorType} ${eventMessage}`)) {
+    actionTitle = "Inspect PostgreSQL query timeout";
+    actionDescription = "Review the failed query, active connections, and pool waiters; compare them with the incident trace before changing limits.";
+  } else if (genericAction && incident?.service && traceEvents.length) {
+    actionTitle = `Inspect ${serviceLabel} failure evidence`;
+    actionDescription = `Review the observed error and related trace events for ${serviceLabel}; verify the failing dependency before selecting a remediation.`;
+  }
+  $("actionTitle").textContent = actionTitle;
+  $("actionDescription").textContent = action ? `${actionDescription} Status: ${action.status.replaceAll("_", " ")}.` : actionDescription;
+  $("responseTarget").textContent = action?.target || incident?.service || "Unknown service";
+  $("responseBasis").textContent = action?.decision_basis || hypothesis?.rationale || "Selected from the incident's retained alert and trace evidence.";
+  $("responseVerification").textContent = action?.verification || "Confirm the observed error stops recurring and the affected service returns to its normal health range.";
+  $("approveAction").disabled = !action || !["awaiting_approval", "blocked_pending_approval"].includes(action.status);
+  $("rejectAction").disabled = !action || !["awaiting_approval", "blocked_pending_approval"].includes(action.status);
+  $("acknowledgeIncident").disabled = !incident || incident.status === "closed";
+  $("closeIncident").disabled = !incident || incident.status === "closed";
+  $("ticketTitle").textContent = ticket ? `${ticket.ticket_id} · ${ticket.priority}` : "Not created";
+  $("ticketDescription").textContent = ticket
+    ? `${ticket.title} · ${ticket.assigned_group} · local demo ticket`
+    : "Create a ticket only when this issue needs to be handed off or tracked.";
+  $("createTicket").disabled = !incident || Boolean(ticket);
+  $("ticketCreateNote").textContent = ticket
+    ? "This ticket is a local POC record. No external ticketing system was contacted."
+    : "No ticket exists yet. Creating one will not contact an external system.";
+  $("ticketStatus").disabled = !ticket;
+  if (ticket) $("ticketStatus").value = ticket.status;
+  $("reportSummary").textContent = report?.summary || "No incident brief yet";
+  $("reportMarkdown").textContent = report?.markdown || "The generated Markdown handoff will appear here.";
+  $("downloadReport").disabled = !report?.markdown;
+}
+function renderAgentRun(incident) {
+  const grid = $("agentRunGrid");
+  const details = $("agentRunDetails");
+  if (!incident) {
+    $("agentRunSummary").textContent = "Select an incident to see agent outputs";
+    grid.innerHTML = "";
+    details.open = false;
+    delete details.dataset.initialized;
+    return;
+  }
+  const evidence = incident.evidence || {};
+  const correlation = evidence.correlation || {};
+  const microagents = correlation.microagents || {};
+  const hypotheses = incident.poc?.rca?.hypotheses || [];
+  const action = incident.poc?.resolution?.actions?.[0];
+  const traceCount = evidence.trace_events?.length || 0;
+  const logCount = evidence.logs?.items?.length || 0;
+  const sopCount = evidence.sops?.evidence?.length || 0;
+  const candidates = microagents["MA-19_failure_pattern_scorer"] || [];
+  const timeline = microagents["MA-17_temporal_change_correlator"]?.timeline || [];
+  const observedLinks = microagents["MA-18_dependency_analyzer"]?.observed_dependency_links || [];
+  const ticket = incident.poc?.ticket;
+  const items = [
+    {agent:"AG-08 Monitoring",micro:"MA-09 to MA-15",state:"done",output:`Alert detected on ${incident.service || "the affected service"}; severity ${incident.severity || "unknown"}. Related signals: ${incident.alert?.related_actionable_signal_count || incident.alert?.related_alerts?.length || 1}.`},
+    {agent:"AG-02 Knowledge",micro:"MA-03 to MA-07",state:"done",output:`Collected ${traceCount} trace events, ${logCount} log matches, and ${sopCount} SOP passages. Evidence retrieval is context, not a diagnosis.`},
+    {agent:"AG-16 Correlation",micro:"MA-17 / MA-18 / MA-19",state:correlation.microagents ? "done" : "unavailable",output:correlation.microagents ? `Analyzed ${correlation.evidence_event_count || 0} trace/context events; ${timeline.filter(item => item.action && ["deployment.started","deployment.completed","deployment.rollback","release.started","release.completed","release.rollback"].includes(item.action)).length} nearby changes, ${observedLinks.length} observed dependency links, and ${candidates.length} matched failure-pattern rule(s).` : "No stored correlation result is available for this incident."},
+    {agent:"AG-20 RCA",micro:"MA-21 / MA-22",state:hypotheses.length ? "done" : "unavailable",output:hypotheses.length ? `${hypotheses.length} candidate explanation(s). Leading: ${hypotheses[0].title}. Cause remains unconfirmed.` : "No stored hypothesis is available."},
+    {agent:"AG-23 Resolution",micro:"MA-24 / MA-25 / MA-26",state:action ? "done" : "unavailable",output:action ? `${action.title}. State: ${String(action.status).replaceAll("_", " ")}. ${action.mode === "simulation_only" ? "Simulation only; no external system changed." : ""}` : "No response action is stored."},
+    {agent:"AG-27 Ticketing",micro:"MA-28 / MA-29",state:ticket ? "done" : "waiting",output:ticket ? `Local ticket ${ticket.ticket_id}, status ${ticket.status}.` : "Waiting for the operator to choose Create ticket. No external ITSM system is connected."}
+  ];
+  $("agentRunSummary").textContent = `${items.filter(item => item.state === "done").length} agent stages completed · ${items.filter(item => item.state === "waiting").length} waiting for operator`;
+  grid.innerHTML = items.map(item => `<article class="agent-run-item" data-state="${item.state}"><header><i class="agent-run-state" aria-hidden="true"></i><strong>${escapeHtml(item.agent)}</strong></header><small>${escapeHtml(item.micro)} · ${item.state === "done" ? "completed" : item.state === "waiting" ? "operator action" : "not available"}</small><p>${escapeHtml(item.output)}</p></article>`).join("");
+  if (!details.dataset.initialized) {
+    details.open = true;
+    details.dataset.initialized = "true";
+  }
+}
 async function updateStatus() {
   const s = await api("/api/simulator/status");
   $("runningLabel").textContent = s.running ? "Generating events" : "Generation paused";
@@ -205,6 +1515,10 @@ async function updateStatus() {
   $("dbConnections").textContent = `${s.db_connections_active} / ${s.db_connections_max}`;
   $("kafkaLag").textContent = s.kafka_consumer_lag.toLocaleString();
   $("resources").textContent = `${s.memory_mb} MB / ${s.disk_percent}%`;
+  trendSamples.push({time:Date.now(),errorRate:s.error_rate*100,requests:s.requests});
+  if (trendSamples.length>120) trendSamples=trendSamples.slice(-120);
+  renderErrorTrend();
+  renderResourceBars(s);
   $("frequencyLabel").textContent = s.frequency;
   $("scenarioDescription").textContent = `${s.scenario}: ${s.scenario_description}`;
   $("services").innerHTML = s.services.map(name => `<span class="service">${escapeHtml(name)}</span>`).join("");
@@ -230,14 +1544,26 @@ function filteredRecords() {
   );
 }
 function renderLogs() {
-  const visible = filteredRecords().slice(-300).reverse();
-  $("logCount").textContent = `${visible.length} displayed · ${records.length} buffered`;
+  const visible = filteredRecords().reverse();
+  logPageSize = Number($("logPageSize").value) || logPageSize;
+  const pageCount = Math.max(1, Math.ceil(visible.length / logPageSize));
+  logPage = Math.min(logPage, pageCount);
+  const start = visible.length ? (logPage - 1) * logPageSize : 0;
+  const pageItems = visible.slice(start, start + logPageSize);
+  const rangeStart = visible.length ? start + 1 : 0;
+  const rangeEnd = Math.min(start + logPageSize, visible.length);
+  $("logCount").textContent = `${visible.length.toLocaleString()} matching · ${records.length.toLocaleString()} buffered`;
+  $("logPageLabel").textContent = visible.length
+    ? `Page ${logPage} of ${pageCount} · ${rangeStart}-${rangeEnd}`
+    : "Page 1 of 1 · 0 logs";
+  $("logPrevPage").disabled = logPage <= 1;
+  $("logNextPage").disabled = logPage >= pageCount;
   if (!visible.length) {
     $("logTable").innerHTML = '<div class="empty">No records match these filters. Events continue streaming.</div>';
     return;
   }
   $("logTable").innerHTML = `<div class="row header"><span>Timestamp</span><span>Service</span><span>Severity</span><span>Message</span><span>Request / trace</span></div>` +
-    visible.map(record => {
+    pageItems.map(record => {
       const severity = String(record["log.level"] || "info").toLowerCase();
       const timestamp = record["@timestamp"] || record.timestamp || "";
       const ids = record.request_id && record["trace.id"] !== "-" ? `${record.request_id} / ${record["trace.id"]}` : (record.request_id || record["trace.id"] || "—");
@@ -269,56 +1595,75 @@ async function refreshLogs() {
   } catch (error) { setError(error.message); }
   finally { refreshBusy = false; }
 }
-async function runAction(action) {
+async function runAction(action, feedback={}) {
   setError("");
-  try { await action(); await updateStatus(); await refreshLogs(); }
-  catch (error) { setError(error.message); }
+  showActionToast(feedback.pendingTitle || "Working", feedback.pendingMessage || "Applying your request to the simulator…", "info", 0);
+  try {
+    await action();
+    await updateStatus();
+    await refreshLogs();
+    showActionToast(feedback.successTitle || "Done", feedback.successMessage || "The simulator has been updated.", "success");
+  } catch (error) {
+    setError(error.message);
+    showActionToast(feedback.errorTitle || "Action failed", error.message, "error", 8000);
+  }
 }
-$("startButton").onclick = () => runAction(() => api("/api/simulator/start", {method:"POST"}));
-$("stopButton").onclick = () => runAction(() => api("/api/simulator/stop", {method:"POST"}));
-$("recoverButton").onclick = () => runAction(() => api("/api/simulator/recover", {method:"POST"}));
-$("resetButton").onclick = () => runAction(() => api("/api/simulator/reset", {method:"POST"}));
-$("triggerButton").onclick = () => runAction(async () => {
+$("startButton").onclick = () => runAction(() => api("/api/simulator/start", {method:"POST"}), {pendingMessage:"Starting synthetic traffic…",successTitle:"Traffic started",successMessage:"Synthetic service events are now being generated."});
+$("stopButton").onclick = () => runAction(() => api("/api/simulator/stop", {method:"POST"}), {pendingMessage:"Pausing synthetic traffic…",successTitle:"Traffic paused",successMessage:"No new simulator flows will be generated until you restart traffic."});
+$("recoverButton").onclick = () => runAction(() => api("/api/simulator/recover", {method:"POST"}), {pendingMessage:"Starting the simulated recovery sequence…",successTitle:"Recovery started",successMessage:"The simulator will gradually reduce its injected pressure."});
+$("resetButton").onclick = () => runAction(() => api("/api/simulator/reset", {method:"POST"}), {pendingTitle:"Resetting simulator",pendingMessage:"Restoring simulator counters and resource metrics…",successTitle:"Simulator reset",successMessage:"Simulator metrics were reset. Existing incidents and log history were kept."});
+$("triggerButton").onclick = () => {
+  const scenarioLabel = $("scenario").selectedOptions[0]?.textContent || "selected failure";
+  return runAction(async () => {
   const scenario = $("scenario").value;
   await api(`/api/simulator/scenario/${scenario}`, {method:"POST"});
   if (scenario === "code_bug") {
     try { await fetch("/bug/zero"); } catch (_) {}
   }
-});
+  }, {pendingTitle:"Injecting test scenario",pendingMessage:`Applying ${scenarioLabel} to the synthetic environment…`,successTitle:"Scenario injected",successMessage:`${scenarioLabel} is active in the simulator. Monitoring will process the resulting events.`});
+};
 $("frequency").oninput = () => { $("frequency").dataset.changed = "true"; $("frequencyLabel").textContent = $("frequency").value; };
-$("frequency").onchange = () => runAction(() => api("/api/simulator/frequency", {method:"POST", body:JSON.stringify({frequency:Number($("frequency").value)})}));
+$("frequency").onchange = () => runAction(() => api("/api/simulator/frequency", {method:"POST", body:JSON.stringify({frequency:Number($("frequency").value)})}), {pendingTitle:"Updating request rate",successTitle:"Request rate updated",successMessage:`Synthetic traffic is set to ${$("frequency").value} flows per second.`});
 ["search","serviceFilter","severityFilter","timeFilter"].forEach(id => {
-  $(id).addEventListener(id === "search" ? "input" : "change", renderLogs);
+  $(id).addEventListener(id === "search" ? "input" : "change", () => {
+    logPage = 1;
+    renderLogs();
+  });
 });
 $("scenarioFilter").addEventListener("change", () => {
   cursor = 0;
+  logPage = 1;
   records = [];
   refreshLogs();
 });
+$("logPageSize").addEventListener("change", () => { logPageSize = Number($("logPageSize").value); logPage = 1; renderLogs(); });
+$("logPrevPage").onclick = () => { logPage = Math.max(1, logPage - 1); renderLogs(); };
+$("logNextPage").onclick = () => { logPage += 1; renderLogs(); };
 $("ingestButton").onclick = () => runKbAction(async () => {
   const result = await api("/api/kb/documents/ingest", {method:"POST"});
   showKbResult("docResults", result);
   await updateKbStatus();
-});
+}, {pendingTitle:"Ingesting SOP documents",pendingMessage:"Reading, splitting, and indexing the local SOP folder…",successTitle:"SOP ingestion complete",successMessage:"The document index was updated. Check the results panel for processed sources."});
 $("docSearchButton").onclick = () => runKbAction(async () => {
   const query = $("docQuery").value.trim();
   if (!query) throw new Error("Enter a document search query.");
   const params = new URLSearchParams({query});
   const result = await api(`/api/kb/documents/search?${params}`);
   showKbResult("docResults", result);
-});
+}, {pendingTitle:"Searching SOPs",pendingMessage:"Looking for cited document passages…",successTitle:"SOP search complete",successMessage:"Matching excerpts and citations are shown in the results panel."});
 $("logSearchButton").onclick = () => runKbAction(async () => {
   const params = new URLSearchParams({query:$("logQuery").value.trim()});
   const result = await api(`/api/kb/logs/search?${params}`);
   showKbResult("logResults", result);
-});
+}, {pendingTitle:"Searching logs",pendingMessage:"Searching the configured log source…",successTitle:"Log search complete",successMessage:"Matching log evidence is shown in the results panel."});
 $("backfillButton").onclick = () => runKbAction(async () => {
   const result = await api("/api/kb/logs/backfill", {method:"POST"});
   showKbResult("logResults", result);
   await updateKbStatus();
-});
+}, {pendingTitle:"Queueing log history",pendingMessage:"Submitting the available JSONL history for indexing…",successTitle:"Log backfill queued",successMessage:"The indexing worker accepted the backfill request. Check connector status for progress."});
  $("analyzeReviewButton").onclick = async () => {
   setMonitorError("");
+  showActionToast("Analyzing feedback", "Checking the text and optional rating…", "info", 0);
   try {
     const text = $("reviewText").value.trim();
     if (!text) throw new Error("Enter sample review text.");
@@ -328,24 +1673,197 @@ $("backfillButton").onclick = () => runKbAction(async () => {
       body:JSON.stringify({text, ...(rating ? {rating:Number(rating)} : {})})
     });
     $("reviewResult").textContent = JSON.stringify(result, null, 2);
-  } catch (error) { setMonitorError(error.message); }
+    showActionToast("Feedback analysis complete", "Sentiment and topic results are shown in the diagnostics panel.", "success");
+  } catch (error) {
+    setMonitorError(error.message);
+    showActionToast("Feedback analysis failed", error.message, "error", 8000);
+  }
 };
-async function runKbAction(action) {
+$("guidedDemo").onclick = async () => {
+  const button = $("guidedDemo");
+  button.disabled = true;
+  button.textContent = "Starting demo…";
+  const runStatus = $("demoRunStatus");
+  runStatus.classList.remove("error");
+  runStatus.classList.add("visible");
+  runStatus.innerHTML = "<strong>Step 1 of 4</strong> · Sending a synthetic request failure into monitoring…";
+  $("orchestratorError").textContent = "";
+  showActionToast("Guided demo started", "Sending related synthetic failures through monitoring and investigation…", "info", 0);
+  try {
+    const traceId = `guided-demo-${crypto.randomUUID().replaceAll("-", "")}`;
+    const eventIds = await sendGuidedDemoSignals(traceId);
+    runStatus.innerHTML = "<strong>Step 2 of 4</strong> · Monitoring detected the failure signals. Correlating their shared request trace…";
+    const incident = await waitForAutomaticIncident(traceId);
+    if (!incident) throw new Error("Signals were accepted, but automatic incident analysis did not finish in time.");
+    runStatus.innerHTML = "<strong>Step 3 of 4</strong> · One incident created from the related signals. Checking evidence, dependencies, and runbooks…";
+    await updateOrchestrator();
+    $("incidentSelect").value = incident.incident_id;
+    await loadIncidentDetails();
+    runStatus.innerHTML = `<strong>Step 4 of 4</strong> · ${escapeHtml(incident.incident_id)} is ready. Review the possible explanation and choose whether to create a ticket.`;
+    showActionToast("Investigation ready", `${incident.incident_id} has an assessment, evidence timeline, and proposed next step.`, "success", 7000);
+    document.querySelector(".command-center").scrollIntoView({behavior:"smooth",block:"start"});
+  } catch (error) {
+    runStatus.classList.add("error");
+    runStatus.textContent = error.message;
+    $("orchestratorError").textContent = error.message;
+    showActionToast("Guided demo failed", error.message, "error", 8000);
+  }
+  finally { button.disabled = false; button.textContent = "Simulate an issue"; }
+};
+async function sendGuidedDemoSignals(traceId) {
+  const signalDefinitions = [
+    {service:"api-gateway",message:"Synthetic demo: gateway received HTTP 503",action:"http.request",error:"UpstreamError"},
+    {service:"vehicle-telemetry-api",message:"Synthetic demo: telemetry request timed out",action:"telemetry.read",error:"TimeoutError"},
+    {service:"postgresql",message:"Synthetic demo: database query timed out",action:"database.query",error:"QueryTimeout"}
+  ];
+  const eventIds = [];
+  for (const [index, signal] of signalDefinitions.entries()) {
+    const eventId = `${traceId}-${index + 1}`;
+    eventIds.push(eventId);
+    await api("/api/monitoring/ingest", {
+      method:"POST",
+      body:JSON.stringify({connector_id:"simulator",event:{
+        "@timestamp":new Date().toISOString(),
+        "event.id":eventId,
+        "trace.id":traceId,
+        "service.name":signal.service,
+        "log.level":"error",
+        "message":signal.message,
+        "event.action":signal.action,
+        "event.outcome":"failure",
+        "error.type":signal.error,
+        "latency_ms":1800,
+        "http.response.status_code":503
+      }})
+    });
+  }
+  return eventIds;
+}
+async function waitForAutomaticIncident(traceId, remainingAttempts=100) {
+  const result = await api("/api/orchestrator/incidents/summary?limit=10");
+  const incident = result.items.find(item => item.alert?.event_evidence?.trace_id === traceId);
+  if (incident || remainingAttempts <= 0) return incident;
+  await new Promise(resolve => setTimeout(resolve, 150));
+  return waitForAutomaticIncident(traceId, remainingAttempts - 1);
+}
+$("incidentSelect").addEventListener("change", () => {
+  $("topologyIncidentSelect").value = $("incidentSelect").value;
+  loadIncidentDetails().catch(error => { $("orchestratorError").textContent = error.message; });
+  renderIncidentTable();
+});
+$("incidentStateFilter").addEventListener("change",() => { incidentPage = 1; renderIncidentTable(); });
+$("incidentSeverityFilter").addEventListener("change",() => { incidentPage = 1; renderIncidentTable(); });
+$("incidentPageSize").addEventListener("change",() => { incidentPageSize = Number($("incidentPageSize").value); incidentPage = 1; renderIncidentTable(); });
+$("incidentPrevPage").onclick = () => { incidentPage = Math.max(1, incidentPage - 1); renderIncidentTable(); };
+$("incidentNextPage").onclick = () => { incidentPage += 1; renderIncidentTable(); };
+$("topologyIncidentSelect").addEventListener("change",()=>{
+  $("incidentSelect").value=$("topologyIncidentSelect").value;
+  loadIncidentDetails().catch(error=>{$("orchestratorError").textContent=error.message;});
+});
+$("overviewSimulate").onclick=()=>{
+  showPage("incidents");
+  $("guidedDemo").click();
+};
+async function reviewPOCAction(approved) {
+  $("orchestratorError").textContent = "";
+  showActionToast(approved ? "Approving simulated action" : "Rejecting recommendation", approved ? "Running the local dry-run check…" : "Recording your decision…", "info", 0);
+  try {
+    const incidentId = $("incidentSelect").value;
+    if (!incidentId) throw new Error("Select an investigation first.");
+    await api(`/api/orchestrator/incidents/${encodeURIComponent(incidentId)}/poc/approval`, {
+      method:"POST", body:JSON.stringify({approved})
+    });
+    await loadIncidentDetails();
+    showActionToast(approved ? "Dry run complete" : "Recommendation rejected", approved ? "The simulated action completed. No production service was changed." : "The recommendation was rejected and no action was run.", "success");
+  } catch (error) {
+    $("orchestratorError").textContent = error.message;
+    showActionToast("Decision failed", error.message, "error", 8000);
+  }
+}
+$("approveAction").onclick = () => reviewPOCAction(true);
+$("rejectAction").onclick = () => reviewPOCAction(false);
+$("createTicket").onclick = async () => {
+  $("orchestratorError").textContent = "";
+  showActionToast("Creating local ticket", "Saving a handoff record inside this POC…", "info", 0);
+  try {
+    const incidentId = $("incidentSelect").value;
+    if (!incidentId) throw new Error("Select an incident first.");
+    const incident = await api(`/api/orchestrator/incidents/${encodeURIComponent(incidentId)}/poc/ticket`, {method:"POST"});
+    await loadIncidentDetails();
+    $("ticketCreateNote").textContent = `Created ${incident.poc.ticket.ticket_id} locally. No external ticketing system was contacted.`;
+    showActionToast("Local ticket created", `${incident.poc.ticket.ticket_id} was saved. No external ticketing system was contacted.`, "success");
+  } catch (error) {
+    $("orchestratorError").textContent = error.message;
+    showActionToast("Ticket creation failed", error.message, "error", 8000);
+  }
+};
+$("ticketStatus").onchange = async () => {
+  $("orchestratorError").textContent = "";
+  const nextStatus = $("ticketStatus").value;
+  showActionToast("Updating ticket", `Changing its local status to ${nextStatus.replaceAll("_", " ")}…`, "info", 0);
+  try {
+    const incidentId = $("incidentSelect").value;
+    await api(`/api/orchestrator/incidents/${encodeURIComponent(incidentId)}/poc/ticket/status`, {
+      method:"POST", body:JSON.stringify({status:$("ticketStatus").value})
+    });
+    await loadIncidentDetails();
+    showActionToast("Ticket status updated", `The local ticket is now ${nextStatus.replaceAll("_", " ")}.`, "success");
+  } catch (error) {
+    $("orchestratorError").textContent = error.message;
+    showActionToast("Ticket update failed", error.message, "error", 8000);
+  }
+};
+$("downloadReport").onclick = async () => {
+  const incidentId = $("incidentSelect").value || "incident";
+  const report = $("reportMarkdown").textContent;
+  const url = URL.createObjectURL(new Blob([report], {type:"text/markdown;charset=utf-8"}));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${incidentId}-brief.md`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showActionToast("Summary downloaded", `${incidentId}-brief.md was sent to your browser downloads.`, "success");
+};
+async function reviewIncident(status) {
+  $("orchestratorError").textContent = "";
+  showActionToast(status === "acknowledged" ? "Acknowledging incident" : "Closing incident", "Saving the incident review state…", "info", 0);
+  try {
+    const incidentId = $("incidentSelect").value;
+    if (!incidentId) throw new Error("Select an investigation first.");
+    await api(`/api/orchestrator/incidents/${encodeURIComponent(incidentId)}/review`, {
+      method:"POST", body:JSON.stringify({status})
+    });
+    await updateOrchestrator();
+    showActionToast(status === "acknowledged" ? "Incident acknowledged" : "Incident closed", `The incident is now ${status.replaceAll("_", " ")}.`, "success");
+  } catch (error) {
+    $("orchestratorError").textContent = error.message;
+    showActionToast("Incident update failed", error.message, "error", 8000);
+  }
+}
+$("acknowledgeIncident").onclick = () => reviewIncident("acknowledged");
+$("closeIncident").onclick = () => reviewIncident("closed");
+async function runKbAction(action, feedback={}) {
   setKbError("");
-  try { await action(); }
-  catch (error) { setKbError(error.message); }
+  showActionToast(feedback.pendingTitle || "Working", feedback.pendingMessage || "Searching the local knowledge base…", "info", 0);
+  try {
+    await action();
+    showActionToast(feedback.successTitle || "Done", feedback.successMessage || "The knowledge-base action completed.", "success");
+  } catch (error) {
+    setKbError(error.message);
+    showActionToast(feedback.errorTitle || "Action failed", error.message, "error", 8000);
+  }
 }
 async function init() {
-  try { await updateStatus(); await refreshLogs(); await updateKbStatus(); await updateMonitoring(); }
+  try { await loadTopology(); await updateStatus(); await refreshLogs(); await updateKbStatus(); await updateMonitoring(); await updateOrchestrator(); }
   catch (error) { setError(error.message); }
   setInterval(() => {
     updateStatus().catch(error => setError(error.message));
     refreshLogs();
     updateKbStatus().catch(error => setKbError(error.message));
     updateMonitoring().catch(error => setMonitorError(error.message));
+    updateOrchestrator().catch(error => { $("orchestratorError").textContent = error.message; });
   }, 3000);
 }
 init();
 </script>
-</body>
 </html>

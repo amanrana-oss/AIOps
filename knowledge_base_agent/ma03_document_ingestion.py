@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import re
@@ -56,6 +57,47 @@ class DocumentIngestionMicroAgent:
                 raise KnowledgeBaseError("document has too many chunks")
         return chunks
 
+    def prepare_issue_trackers(self, source_root: Path) -> dict[str, Any]:
+        allowed = {"issue description", "category", "sub-category", "product", "status",
+                   "containment action", "corrective action", "resolution details", "rca",
+                   "solution (fix)", "priority", "severity", "reported date", "date"}
+        documents: list[dict[str, Any]] = []
+        skipped: list[dict[str, str]] = []
+        files_read = 0
+        for path in sorted(source_root.glob("*.csv")):
+            try:
+                if path.stat().st_size > MAX_DOCUMENT_BYTES:
+                    raise KnowledgeBaseError("tracker exceeds 20 MB")
+                with path.open(encoding="utf-8-sig", newline="") as stream:
+                    rows = csv.DictReader(stream)
+                    for row_number, row in enumerate(rows, start=2):
+                        if row_number > 10001:
+                            raise KnowledgeBaseError("tracker exceeds 10000 rows")
+                        fields = {str(key).strip(): str(value).strip() for key, value in row.items()
+                                  if key and key.strip().casefold() in allowed and value}
+                        if not fields.get("Issue Description"):
+                            continue
+                        text = "\n".join(f"{key}: {value}" for key, value in fields.items())
+                        text = re.sub(r"\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b", "[EMAIL_REDACTED]", text)
+                        text = re.sub(r"\b[A-HJ-NPR-Z0-9]{17}\b", "[VIN_REDACTED]", text)
+                        text = re.sub(r"(?<!\w)(?:\+?\d[\d ()-]{7,}\d)(?!\w)", "[PHONE_REDACTED]", text)
+                        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+                        for chunk_index, chunk in enumerate(self._chunks(text)):
+                            source_path = f"real-data/{path.name}"
+                            documents.append({
+                                "id": hashlib.sha256(f"{source_path}:{row_number}:{digest}:{chunk_index}".encode()).hexdigest(),
+                                "text": chunk,
+                                "metadata": {"source_path": source_path, "source_name": path.name,
+                                             "title": f"{path.stem} row {row_number}", "source_sha256": digest,
+                                             "source_row": row_number, "chunk_index": row_number * 1000 + chunk_index,
+                                             "document_type": "issue_tracker", "review_status": "unreviewed",
+                                             "ingested_at": utc_now(), "knowledge_kind": "historical_issue_not_approved_sop"},
+                            })
+                files_read += 1
+            except (OSError, UnicodeError, csv.Error, KnowledgeBaseError) as exc:
+                skipped.append({"file": path.name, "reason": str(exc)})
+        return {"documents": documents, "files_read": files_read, "skipped": skipped}
+
     def _document_metadata(self, path: Path) -> dict[str, str]:
         sidecar = path.with_name(f"{path.name}.meta.json")
         if not sidecar.exists():
@@ -75,7 +117,7 @@ class DocumentIngestionMicroAgent:
                 metadata[key] = str(value)
         return metadata
 
-    def prepare(self) -> dict[str, Any]:
+    def prepare(self, allowed_suffixes: set[str] | None = None, max_document_bytes: int = MAX_DOCUMENT_BYTES) -> dict[str, Any]:
         self.source_root.mkdir(parents=True, exist_ok=True)
         documents: list[dict[str, Any]] = []
         skipped: list[dict[str, str]] = []
@@ -87,12 +129,14 @@ class DocumentIngestionMicroAgent:
                 continue
             if path.name.endswith(".meta.json"):
                 continue
+            if allowed_suffixes is not None and path.suffix.lower() not in allowed_suffixes:
+                continue
             if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
                 skipped.append({"file": str(path.relative_to(self.source_root)), "reason": "unsupported file type"})
                 continue
             try:
-                if path.stat().st_size > MAX_DOCUMENT_BYTES:
-                    skipped.append({"file": str(path.relative_to(self.source_root)), "reason": "file exceeds 20 MB"})
+                if path.stat().st_size > max_document_bytes:
+                    skipped.append({"file": str(path.relative_to(self.source_root)), "reason": f"file exceeds {max_document_bytes // (1024 * 1024)} MB"})
                     continue
                 text = self._extract(path).strip()
                 if not text:

@@ -8,3 +8,10 @@ __pycache__/
 *.log
 logs/
 data/chroma/
+data/*.sqlite3
+data/real-data/
+data/sops/*
+!data/sops/demo-operations-triage.md
+data/feedback/flying_flea_bikedekho_user_supplied.json
+data/feedback/flying_flea_bikewale_public.json
+data/feedback/flying_flea_google_play_public.json

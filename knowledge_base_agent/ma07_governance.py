@@ -25,6 +25,7 @@ class KnowledgeGovernanceMicroAgent:
             item = {**hit, "citation": {
                 "source": metadata.get("source_path", "unknown"),
                 "chunk": metadata.get("chunk_index", 0),
+                "row": metadata.get("source_row"),
                 "sha256": metadata.get("source_sha256", ""),
             }}
             item["review_required"] = metadata.get("review_status", "unreviewed") != "approved"
